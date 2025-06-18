@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect } from 'react';
 import { Character, AttributeName, ATTRIBUTE_NAMES, ATTRIBUTE_LABELS, MagicInfo, Spell } from '../types';
 import { ALL_SKILLS, SkillDefinition, calculateProficiencyBonus } from '../skills';
@@ -8,7 +9,7 @@ import {
   getClassSpellSlots, 
   getClassCantripsKnownCount, 
   getClassSpellsKnownCount,
-  getWizardLevel1SpellsForSpellbook, // Still used for initial Wizard spellbook
+  getWizardLevel1SpellsForSpellbook,
   getClassMaxSpellLevel 
 } from '../classFeatures'; 
 import { calculateModifier, formatModifier } from './AttributeField';
@@ -55,7 +56,7 @@ const initialCharacterValues: Omit<Character, 'id' | 'magic'> & { id?: string; m
     spellAttackBonus: 0,
     cantripsKnown: [],
     spellsKnownPrepared: [],
-    spellbook: [], // Specifically for Wizard initial spells, could be merged or kept separate
+    spellbook: [], 
     spellSlots: Array(9).fill(0),
   }
 };
@@ -67,19 +68,17 @@ const CharacterForm: React.FC<CharacterFormProps> = ({ onSave, initialData }) =>
       ? { ...initialData } 
       : { ...initialCharacterValues, id: '', proficientSkills: initialData?.proficientSkills || [] };
     
-    // Ensure magic object and its properties exist
     baseData.magic = {
-      ...(initialCharacterValues.magic), // Start with defaults
-      ...(baseData.magic || {}), // Overlay with any existing data
+      ...(initialCharacterValues.magic), 
+      ...(baseData.magic || {}), 
       spellSlots: baseData.magic?.spellSlots && baseData.magic.spellSlots.length === 9 
                     ? baseData.magic.spellSlots 
-                    : Array(9).fill(0), // Ensure spellSlots is always an array of 9
+                    : Array(9).fill(0), 
     };
     
     const initialPrimaryAbility = CLASS_SPELLCASTING_ABILITIES[baseData.charClass] || undefined;
     baseData.magic.spellcastingAbilityName = baseData.magic.spellcastingAbilityName || initialPrimaryAbility;
     
-    // Auto-calculate spell slots on initial load if class and level are set
     if (baseData.charClass && baseData.level) {
         baseData.magic.spellSlots = getClassSpellSlots(baseData.charClass, baseData.level);
     }
@@ -91,7 +90,7 @@ const CharacterForm: React.FC<CharacterFormProps> = ({ onSave, initialData }) =>
   const [numCantripsAllowed, setNumCantripsAllowed] = useState<number>(0);
   
   const [availableL1WizardSpells, setAvailableL1WizardSpells] = useState<Spell[]>([]);
-  const numInitialWizardSpellbookSpells = getWizardLevel1SpellsForSpellbook(); // Wizard specific
+  const numInitialWizardSpellbookSpells = getWizardLevel1SpellsForSpellbook(); 
 
   const [availableSpellsForSelection, setAvailableSpellsForSelection] = useState<Spell[]>([]);
   const [numSpellsKnownAllowed, setNumSpellsKnownAllowed] = useState<number>(0);
@@ -103,8 +102,6 @@ const CharacterForm: React.FC<CharacterFormProps> = ({ onSave, initialData }) =>
 
 
   useEffect(() => {
-    // This effect ensures that when initialData changes (e.g., selecting a different character to edit),
-    // the form state is fully reset and recalculated based on the new initialData.
     const baseData = initialData && initialData.id 
       ? { ...initialData }
       : { ...initialCharacterValues, id: '', proficientSkills: initialData?.proficientSkills || [] };
@@ -133,83 +130,116 @@ const CharacterForm: React.FC<CharacterFormProps> = ({ onSave, initialData }) =>
 
     setExpandedSpellName(null); 
 
-    const primaryAbility = CLASS_SPELLCASTING_ABILITIES[className] || undefined;
-    if (formData.magic?.spellcastingAbilityName !== primaryAbility && 
-        (!formData.magic?.spellcastingAbilityName || 
-         CLASS_SPELLCASTING_ABILITIES[initialData?.charClass || ''] !== formData.magic?.spellcastingAbilityName)) {
-        setFormData(prev => ({
-            ...prev,
-            magic: {
-                ...(prev.magic || initialCharacterValues.magic),
-                spellcastingAbilityName: primaryAbility,
-            }
-        }));
-    }
-
-    // Auto-update spell slots based on class and level
-    const newSpellSlots = getClassSpellSlots(className, level);
-    setFormData(prev => ({
-        ...prev,
-        magic: {
-            ...(prev.magic || initialCharacterValues.magic),
-            spellSlots: newSpellSlots,
-        }
-    }));
-
+    // Determine available spells and limits first
+    let currentAvailableCantrips: Spell[] = [];
+    let currentNumCantripsAllowed = 0;
+    let currentAvailableL1WizardSpells: Spell[] = [];
+    let currentAvailableSpellsForSelection: Spell[] = [];
+    let currentNumSpellsKnownAllowed = 0;
 
     if (className && level >= 1) {
-      // Cantrips
-      const fetchedCantrips = getCantripsByClass(className);
-      setAvailableCantrips(fetchedCantrips);
-      const calculatedNumCantripsAllowed = getClassCantripsKnownCount(className, level);
-      setNumCantripsAllowed(calculatedNumCantripsAllowed);
+      currentAvailableCantrips = getCantripsByClass(className);
+      currentNumCantripsAllowed = getClassCantripsKnownCount(className, level);
 
-      // Wizard-specific initial L1 spellbook
       if (className === 'Mago') {
-        const l1Spells = getSpellsByClassAndLevel('Mago', 1);
-        setAvailableL1WizardSpells(l1Spells);
-        setAvailableSpellsForSelection([]); // Clear general list for wizards
-        setNumSpellsKnownAllowed(0);
-      } 
-      // Spells Known for classes like Ranger, Sorcerer, Bard, Bruxo
-      else if (['Patrulheiro', 'Feiticeiro', 'Bardo', 'Bruxo'].includes(className)) {
-        setAvailableL1WizardSpells([]); // Not for these classes
+        currentAvailableL1WizardSpells = getSpellsByClassAndLevel('Mago', 1);
+      } else if (['Patrulheiro', 'Feiticeiro', 'Bardo', 'Bruxo'].includes(className)) {
         const maxSpellLvlForClass = getClassMaxSpellLevel(className, level);
         let learnableSpells: Spell[] = [];
         for (let spellLvl = 1; spellLvl <= maxSpellLvlForClass; spellLvl++) {
           learnableSpells = [...learnableSpells, ...getSpellsByClassAndLevel(className, spellLvl)];
         }
-        setAvailableSpellsForSelection(learnableSpells);
-        setNumSpellsKnownAllowed(getClassSpellsKnownCount(className, level));
-      } 
-      // Classes that prepare from list (Cleric, Druid, Paladin)
-      else if (['Clérigo', 'Druida', 'Paladino'].includes(className)){
-        setAvailableL1WizardSpells([]);
+        currentAvailableSpellsForSelection = learnableSpells;
+        currentNumSpellsKnownAllowed = getClassSpellsKnownCount(className, level);
+      } else if (['Clérigo', 'Druida', 'Paladino'].includes(className)){
         const maxSpellLvlForClass = getClassMaxSpellLevel(className, level);
         let preparableSpells: Spell[] = [];
          for (let spellLvl = 1; spellLvl <= maxSpellLvlForClass; spellLvl++) {
           preparableSpells = [...preparableSpells, ...getSpellsByClassAndLevel(className, spellLvl)];
         }
-        setAvailableSpellsForSelection(preparableSpells); // They "know" all, but select "prepared"
-        // For these, numSpellsKnownAllowed might represent "max prepared" which is level + ability_mod
-        // For now, let's keep it simple and let them use the textarea for prepared spells.
-        // Or, we can set numSpellsKnownAllowed to a very high number to allow selecting from the list.
-        setNumSpellsKnownAllowed(Infinity); // Placeholder for "prepare from list"
+        currentAvailableSpellsForSelection = preparableSpells;
+        currentNumSpellsKnownAllowed = Infinity; 
       }
-      else { // Non-casters or other logic
-        setAvailableL1WizardSpells([]);
-        setAvailableSpellsForSelection([]);
-        setNumSpellsKnownAllowed(0);
-      }
-    } else { // No class/level selected
-      setAvailableCantrips([]);
-      setAvailableL1WizardSpells([]);
-      setAvailableSpellsForSelection([]);
-      setNumCantripsAllowed(0);
-      setNumSpellsKnownAllowed(0);
     }
+    
+    setAvailableCantrips(currentAvailableCantrips);
+    setNumCantripsAllowed(currentNumCantripsAllowed);
+    setAvailableL1WizardSpells(currentAvailableL1WizardSpells);
+    setAvailableSpellsForSelection(currentAvailableSpellsForSelection);
+    setNumSpellsKnownAllowed(currentNumSpellsKnownAllowed);
 
-  }, [formData.charClass, formData.level, initialData?.charClass]);
+    // Update formData: primary ability, spell slots, and clean magic arrays
+    setFormData(prev => {
+      // Ensure we use the class and level from `prev` state for consistency during this update
+      const currentClass = prev.charClass;
+      const currentLevel = prev.level;
+      
+      const updatedMagic = { ...(prev.magic || initialCharacterValues.magic) };
+      const primaryAbility = CLASS_SPELLCASTING_ABILITIES[currentClass] || undefined;
+      
+      // 1. Update spellcasting ability
+      // Only update if it's not manually set or if class changed to one with a different default
+      if (updatedMagic.spellcastingAbilityName !== primaryAbility && 
+        (!updatedMagic.spellcastingAbilityName || CLASS_SPELLCASTING_ABILITIES[initialData?.charClass || ''] !== updatedMagic.spellcastingAbilityName)) {
+           if(CLASS_SPELLCASTING_ABILITIES[currentClass]) { // only set if current class has a default
+             updatedMagic.spellcastingAbilityName = primaryAbility;
+           }
+      }
+        
+      // 2. Update spell slots
+      updatedMagic.spellSlots = getClassSpellSlots(currentClass, currentLevel);
+
+      // 3. Clean selected spells
+      // Use the spell lists derived from currentClass and currentLevel for cleaning
+      const validCantripNames = getCantripsByClass(currentClass).map(s => s.name);
+      updatedMagic.cantripsKnown = (updatedMagic.cantripsKnown || []).filter(spellName => 
+        validCantripNames.includes(spellName)
+      );
+
+      if (currentClass === 'Mago') {
+        const allWizardSpellNames = [];
+        for(let i=0; i<=9; i++) allWizardSpellNames.push(...getSpellsByClassAndLevel('Mago', i).map(s => s.name));
+        
+        updatedMagic.spellbook = (updatedMagic.spellbook || []).filter(spellName =>
+          allWizardSpellNames.includes(spellName)
+        );
+        // Wizard prepared spells (spellsKnownPrepared) are typically from their spellbook.
+        // If they use the textarea, it's manual. If checkboxes were used for prepared,
+        // they'd be filtered against their cleaned spellbook.
+        // For now, let's assume textarea for prepared, or if spellsKnownPrepared had invalid spells from other classes.
+         updatedMagic.spellsKnownPrepared = (updatedMagic.spellsKnownPrepared || []).filter(spellName =>
+            allWizardSpellNames.includes(spellName) // Prepared must be a valid wizard spell
+        );
+
+      } else if (['Patrulheiro', 'Feiticeiro', 'Bardo', 'Bruxo'].includes(currentClass)) {
+        const maxSpellLvl = getClassMaxSpellLevel(currentClass, currentLevel);
+        let validKnownSpellNames: string[] = [];
+        for (let spellLvl = 1; spellLvl <= maxSpellLvl; spellLvl++) {
+          validKnownSpellNames = [...validKnownSpellNames, ...getSpellsByClassAndLevel(currentClass, spellLvl).map(s => s.name)];
+        }
+        updatedMagic.spellsKnownPrepared = (updatedMagic.spellsKnownPrepared || []).filter(spellName => 
+          validKnownSpellNames.includes(spellName)
+        );
+      } else if (['Clérigo', 'Druida', 'Paladino'].includes(currentClass)) {
+        const maxSpellLvl = getClassMaxSpellLevel(currentClass, currentLevel);
+        let validPreparableSpellNames: string[] = [];
+        for (let spellLvl = 1; spellLvl <= maxSpellLvl; spellLvl++) {
+          validPreparableSpellNames = [...validPreparableSpellNames, ...getSpellsByClassAndLevel(currentClass, spellLvl).map(s => s.name)];
+        }
+        // This cleans spells in spellsKnownPrepared if they are not on the class's overall spell list
+        updatedMagic.spellsKnownPrepared = (updatedMagic.spellsKnownPrepared || []).filter(spellName =>
+            validPreparableSpellNames.includes(spellName)
+        );
+      }
+
+      // Only return a new object if something actually changed to prevent render loops
+      if (JSON.stringify(prev.magic) !== JSON.stringify(updatedMagic)) {
+        return { ...prev, magic: updatedMagic };
+      }
+      return prev; 
+    });
+
+  }, [formData.charClass, formData.level]); // Removed initialData dependencies here, handled by separate effect
 
 
   useEffect(() => {
@@ -335,10 +365,7 @@ const CharacterForm: React.FC<CharacterFormProps> = ({ onSave, initialData }) =>
         } else if (fieldName === 'spellsKnownPrepared' && ['Patrulheiro', 'Feiticeiro', 'Bardo', 'Bruxo'].includes(prev.charClass)) {
             limit = numSpellsKnownAllowed;
         }
-        // For preparers (Cleric, Druid, Paladin), limit might be different (e.g. level + mod). 
-        // For now, if numSpellsKnownAllowed is Infinity for them, this check is bypassed.
-
-
+        
         if (newArray.length > limit && !currentArray.includes(spellName) && limit !== Infinity) {
              console.warn(`Cannot add ${spellName}. Limit of ${limit} for ${fieldName} reached.`);
              return prev; 
@@ -360,11 +387,11 @@ const CharacterForm: React.FC<CharacterFormProps> = ({ onSave, initialData }) =>
     const characterToSave: Character = { 
         ...formData, 
         id: formData.id || Date.now().toString(),
-        magic: { // Ensure magic data is properly structured
+        magic: { 
             ...(formData.magic || initialCharacterValues.magic),
             spellcastingAbilityName: formData.magic?.spellcastingAbilityName || CLASS_SPELLCASTING_ABILITIES[formData.charClass] || undefined,
-            spellSaveDC: formData.magic?.spellSaveDC || 0,
-            spellAttackBonus: formData.magic?.spellAttackBonus || 0,
+            spellSaveDC: formData.magic?.spellSaveDC || calculatedSpellSaveDC || 0, // Use calculated if available
+            spellAttackBonus: formData.magic?.spellAttackBonus || (calculatedSpellAttackBonus ? parseFloat(calculatedSpellAttackBonus) : 0), // Use calculated
             cantripsKnown: Array.isArray(formData.magic?.cantripsKnown) 
                 ? formData.magic.cantripsKnown 
                 : ((formData.magic?.cantripsKnown as unknown as string)?.split(',').map(s=>s.trim()).filter(s=>s) || []),
@@ -606,7 +633,14 @@ const CharacterForm: React.FC<CharacterFormProps> = ({ onSave, initialData }) =>
             {/* Cantrips Selection */}
             <div className="my-6">
               <h4 className="text-lg font-semibold text-black mb-3">
-                Truques Conhecidos {numCantripsAllowed > 0 ? `(Escolha ${numCantripsAllowed})` :formData.charClass && getClassCantripsKnownCount(formData.charClass, formData.level) === 0 ? '(Nenhum para esta classe/nível)' : ''}
+                Truques Conhecidos{' '}
+                {numCantripsAllowed > 0 && availableCantrips.length > 0
+                  ? `(Escolha ${Math.min(numCantripsAllowed, availableCantrips.length)} de ${availableCantrips.length} disponíveis. Limite da classe: ${numCantripsAllowed})`
+                  : formData.charClass && getClassCantripsKnownCount(formData.charClass, formData.level) === 0
+                  ? '(Nenhum para esta classe/nível)'
+                  : numCantripsAllowed > 0 && availableCantrips.length === 0 
+                  ? `(Limite da classe: ${numCantripsAllowed}, nenhum truque cadastrado para seleção)`
+                  : ''}
               </h4>
               {numCantripsAllowed > 0 ? (
                 availableCantrips.length > 0 ? (
@@ -614,7 +648,7 @@ const CharacterForm: React.FC<CharacterFormProps> = ({ onSave, initialData }) =>
                     {availableCantrips.map(spell => renderSpellListItem(spell, 'cantripsKnown', formData.magic?.cantripsKnown, numCantripsAllowed))}
                   </div>
                 ) : (
-                  <p className="text-sm text-slate-500">Nenhum truque disponível para esta classe/nível ou lista de truques não carregada.</p>
+                  <p className="text-sm text-slate-500">Nenhum truque disponível para esta classe/nível ou lista de truques não carregada/cadastrada.</p>
                 )
               ) : (
                  getClassCantripsKnownCount(formData.charClass, formData.level) === 0 && <p className="text-sm text-slate-500">Esta classe/nível não concede truques.</p>
@@ -625,30 +659,36 @@ const CharacterForm: React.FC<CharacterFormProps> = ({ onSave, initialData }) =>
             {formData.charClass === 'Mago' && (
               <div className="my-6">
                 <h4 className="text-lg font-semibold text-black mb-3">
-                  Grimório - Magias de 1º Nível (Escolha {numInitialWizardSpellbookSpells})
+                  Grimório - Magias de 1º Nível{' '}
+                  {availableL1WizardSpells.length > 0 
+                    ? `(Escolha ${Math.min(numInitialWizardSpellbookSpells, availableL1WizardSpells.length)} de ${availableL1WizardSpells.length} disponíveis. Limite inicial: ${numInitialWizardSpellbookSpells})`
+                    : `(Limite inicial: ${numInitialWizardSpellbookSpells}, nenhuma magia de 1º nível cadastrada para seleção)`}
                 </h4>
                 {availableL1WizardSpells.length > 0 ? (
                   <div className="space-y-3">
                     {availableL1WizardSpells.map(spell => renderSpellListItem(spell, 'spellbook', formData.magic?.spellbook, numInitialWizardSpellbookSpells))}
                   </div>
                 ) : (
-                   <p className="text-sm text-slate-500">Nenhuma magia de 1º nível disponível para Magos neste momento ou lista não carregada.</p>
+                   <p className="text-sm text-slate-500">Nenhuma magia de 1º nível disponível para Magos neste momento ou lista não carregada/cadastrada.</p>
                 )}
               </div>
             )}
 
             {/* Spells Known Selection (Ranger, Sorcerer, Bard, Warlock) */}
-            {['Patrulheiro', 'Feiticeiro', 'Bardo', 'Bruxo'].includes(formData.charClass) && numSpellsKnownAllowed > 0 && (
+            {['Patrulheiro', 'Feiticeiro', 'Bardo', 'Bruxo'].includes(formData.charClass) && numSpellsKnownAllowed > 0 && numSpellsKnownAllowed !== Infinity && (
               <div className="my-6">
                 <h4 className="text-lg font-semibold text-black mb-3">
-                  Magias Conhecidas (Escolha {numSpellsKnownAllowed})
+                  Magias Conhecidas{' '}
+                  {availableSpellsForSelection.length > 0
+                    ? `(Escolha ${Math.min(numSpellsKnownAllowed, availableSpellsForSelection.length)} de ${availableSpellsForSelection.length} disponíveis. Limite da classe: ${numSpellsKnownAllowed})`
+                    : `(Limite da classe: ${numSpellsKnownAllowed}, nenhuma magia cadastrada para seleção)`}
                 </h4>
                 {availableSpellsForSelection.length > 0 ? (
                   <div className="space-y-3">
                     {availableSpellsForSelection.map(spell => renderSpellListItem(spell, 'spellsKnownPrepared', formData.magic?.spellsKnownPrepared, numSpellsKnownAllowed))}
                   </div>
                 ) : (
-                   <p className="text-sm text-slate-500">Nenhuma magia disponível para seleção para esta classe/nível, ou lista de magias não carregada.</p>
+                   <p className="text-sm text-slate-500">Nenhuma magia disponível para seleção para esta classe/nível, ou lista de magias não carregada/cadastrada.</p>
                 )}
               </div>
             )}
@@ -664,7 +704,7 @@ const CharacterForm: React.FC<CharacterFormProps> = ({ onSave, initialData }) =>
               />
             )}
             {/* Fallback/Manual entry for "known" casters if dynamic list is not preferred by user / for custom spells */}
-             {['Patrulheiro', 'Feiticeiro', 'Bardo', 'Bruxo'].includes(formData.charClass) && numSpellsKnownAllowed === 0 && (
+             {['Patrulheiro', 'Feiticeiro', 'Bardo', 'Bruxo'].includes(formData.charClass) && numSpellsKnownAllowed === 0 && ( 
                 <Textarea 
                     label="Magias Conhecidas (lista separada por vírgulas)" 
                     name="magic.spellsKnownPrepared" 
@@ -682,9 +722,9 @@ const CharacterForm: React.FC<CharacterFormProps> = ({ onSave, initialData }) =>
                     <label className="block text-sm font-medium text-black mb-1">Nível {i+1}</label>
                     <input 
                         type="number"
-                        name={`magic.spellSlots.${i}`} // Allows manual override if really needed, though generally automatic
+                        name={`magic.spellSlots.${i}`} 
                         value={formData.magic?.spellSlots?.[i] !== undefined ? formData.magic.spellSlots[i] : 0}
-                        onChange={handleChange} // Keep manual override possible
+                        onChange={handleChange} 
                         min="0"
                         className="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md shadow-sm sm:text-sm text-black"
                     />
