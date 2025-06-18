@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Character, MagicInfo, AttributeName } from './types';
+import { Character, AttributeName } from './types';
 import CharacterForm from './components/CharacterForm';
 import CharacterSheetDisplay from './components/CharacterSheetDisplay';
 import Button from './components/ui/Button';
@@ -8,13 +8,14 @@ import RoleSelectionScreen from './components/RoleSelectionScreen';
 import DMCharacterListView from './components/DMCharacterListView';
 import PlayerCharacterList from './components/PlayerCharacterList';
 import { RACES, CLASSES, BACKGROUNDS, ALIGNMENTS, FIGHTING_STYLES } from './dndOptions';
+import * as supabaseService from './supabaseService';
 
 const TEST_CHARACTER_ID = "test-pavel-exemplo-001";
 
 const initialCharacterData: Character = {
   id: TEST_CHARACTER_ID,
   photoUrl: 'https://picsum.photos/300/400',
-  name: 'Pavel Exemplo (Teste)',
+  name: 'Pavel Exemplo (Supabase)', // Updated name for clarity
   background: BACKGROUNDS[12], 
   race: RACES[7], 
   charClass: CLASSES[11], 
@@ -34,7 +35,7 @@ const initialCharacterData: Character = {
     charisma: 10,
   },
   proficientSkills: ['athletics', 'survival', 'stealth', 'investigation', 'perception'],
-  skillNotes: 'Antecedentes e Classe definem as perícias. Personagem de teste.',
+  skillNotes: 'Antecedentes e Classe definem as perícias. Personagem de teste, agora em Supabase.',
   items: 'Arco longo (1d8), 10 flechas, armadura de couro CA+11.\nPedra vermelha.',
   savingThrows: 'Força +2, Destreza +4',
   abilities: 'De manhã vejo isso',
@@ -50,7 +51,7 @@ const initialCharacterData: Character = {
 };
 
 const LOCAL_STORAGE_ROLE_KEY = 'dndUserRole';
-const LOCAL_STORAGE_CHARACTERS_KEY = 'dndCharactersList';
+// LOCAL_STORAGE_CHARACTERS_KEY is removed as we use Supabase now
 
 type Screen = 'role' | 'dm_list' | 'player_char_list' | 'player_sheet' | 'player_form';
 
@@ -61,26 +62,28 @@ const App: React.FC = () => {
   const [viewingCharacter, setViewingCharacter] = useState<Character | null>(null);
   const [screen, setScreen] = useState<Screen>('role');
   const [isInitialized, setIsInitialized] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const loadData = useCallback(() => {
+  const loadData = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
     try {
       const savedRole = localStorage.getItem(LOCAL_STORAGE_ROLE_KEY);
-      const savedCharactersString = localStorage.getItem(LOCAL_STORAGE_CHARACTERS_KEY);
-      let loadedCharacters: Character[] = savedCharactersString ? JSON.parse(savedCharactersString) : [];
+      let fetchedCharacters = await supabaseService.getCharacters();
 
-      if (loadedCharacters.length === 0) {
-        loadedCharacters = [initialCharacterData];
-        localStorage.setItem(LOCAL_STORAGE_CHARACTERS_KEY, JSON.stringify(loadedCharacters));
-      } else {
-        // Ensure test character exists if it was somehow deleted from a non-empty list
-        const testCharExists = loadedCharacters.some(c => c.id === TEST_CHARACTER_ID);
-        if (!testCharExists) {
-            loadedCharacters.push(initialCharacterData);
-            localStorage.setItem(LOCAL_STORAGE_CHARACTERS_KEY, JSON.stringify(loadedCharacters));
+      const testCharExists = fetchedCharacters.some(c => c.id === TEST_CHARACTER_ID);
+      if (!testCharExists) {
+        console.log("Test character not found in Supabase, attempting to add it.");
+        const addedTestChar = await supabaseService.saveCharacter(initialCharacterData);
+        if (addedTestChar) {
+          fetchedCharacters.push(addedTestChar);
+        } else {
+          console.warn("Failed to add test character to Supabase.");
         }
       }
-
-      setCharacters(loadedCharacters);
+      
+      setCharacters(fetchedCharacters);
 
       if (savedRole) {
         setUserRole(savedRole);
@@ -92,95 +95,117 @@ const App: React.FC = () => {
       } else {
         setScreen('role');
       }
-    } catch (error) {
-      console.error("Failed to load data from localStorage", error);
-      setCharacters([initialCharacterData]); // Fallback to test character
-      localStorage.setItem(LOCAL_STORAGE_CHARACTERS_KEY, JSON.stringify([initialCharacterData]));
-      setScreen('role');
+    } catch (err: any) {
+      console.error("Failed to load data from Supabase:", err.message || err);
+      setError(`Falha ao carregar dados do servidor: ${err.message || 'Erro desconhecido'}. Tente recarregar a página.`);
+      // Fallback: could show test character or an empty state
+      // setCharacters([initialCharacterData]); // Optional: local fallback
+    } finally {
+      setIsLoading(false);
+      setIsInitialized(true);
     }
-    setIsInitialized(true);
   }, []);
 
   useEffect(() => {
     loadData();
   }, [loadData]);
 
-  const handleCharacterSave = (charToSave: Character) => {
-    let newCharactersList: Character[];
-    const isEditingExisting = charToSave.id && characters.some(c => c.id === charToSave.id);
-    const characterWithEnsuredId = { ...charToSave, id: charToSave.id || Date.now().toString() };
-
-    if (isEditingExisting) {
-        newCharactersList = characters.map(c => c.id === characterWithEnsuredId.id ? characterWithEnsuredId : c);
-    } else {
-        newCharactersList = [...characters, characterWithEnsuredId];
-    }
-
-    setCharacters(newCharactersList);
+  const handleCharacterSave = async (charToSave: Character) => {
+    setIsLoading(true);
+    setError(null);
     try {
-      localStorage.setItem(LOCAL_STORAGE_CHARACTERS_KEY, JSON.stringify(newCharactersList));
-    } catch (error) {
-      console.error("Failed to save characters to localStorage", error);
-    }
+      const characterWithEnsuredId = { ...charToSave, id: charToSave.id || Date.now().toString() };
+      const savedCharacter = await supabaseService.saveCharacter(characterWithEnsuredId);
 
-    setEditingCharacter(null);
-    if (userRole === 'player') {
-      setViewingCharacter(characterWithEnsuredId); 
-      setScreen('player_sheet');
-    } else { 
-      setScreen('dm_list');
+      if (savedCharacter) {
+        setCharacters(prevChars => {
+          const isEditingExisting = prevChars.some(c => c.id === savedCharacter.id);
+          if (isEditingExisting) {
+            return prevChars.map(c => c.id === savedCharacter.id ? savedCharacter : c);
+          } else {
+            return [...prevChars, savedCharacter];
+          }
+        });
+        setEditingCharacter(null);
+        if (userRole === 'player') {
+          setViewingCharacter(savedCharacter); 
+          setScreen('player_sheet');
+        } else { 
+          setScreen('dm_list');
+        }
+      } else {
+        throw new Error("Character data was not returned after save.");
+      }
+    } catch (err: any) {
+      console.error("Failed to save character to Supabase:", err.message || err);
+      setError(`Falha ao salvar personagem: ${err.message || 'Erro desconhecido'}. Verifique sua conexão e tente novamente.`);
+    } finally {
+      setIsLoading(false);
     }
   };
   
-  const handleUpdateCharacterData = (characterId: string, updates: Partial<Character>) => {
-    const characterIndex = characters.findIndex(c => c.id === characterId);
-    if (characterIndex === -1) {
-      console.warn("Character not found for update:", characterId);
-      return;
-    }
-
-    const oldCharacter = characters[characterIndex];
-    const updatedCharacter = { ...oldCharacter, ...updates };
-    
-    const newCharactersList = [...characters];
-    newCharactersList[characterIndex] = updatedCharacter;
-
-    setCharacters(newCharactersList);
+  const handleUpdateCharacterData = async (characterId: string, updates: Partial<Character>) => {
+    // No separate loading state for this quick action, assume it's fast
     try {
-      localStorage.setItem(LOCAL_STORAGE_CHARACTERS_KEY, JSON.stringify(newCharactersList));
-    } catch (error) {
-      console.error("Failed to save characters to localStorage during partial update", error);
-    }
-
-    if (viewingCharacter && viewingCharacter.id === characterId) {
-      setViewingCharacter(updatedCharacter);
+      const updatedCharacter = await supabaseService.updateCharacter(characterId, updates);
+      if (updatedCharacter) {
+        setCharacters(prevChars => prevChars.map(c => c.id === characterId ? updatedCharacter : c));
+        if (viewingCharacter && viewingCharacter.id === characterId) {
+          setViewingCharacter(updatedCharacter);
+        }
+      } else {
+         console.warn("Character not found for update or no data returned:", characterId);
+      }
+    } catch (err: any) {
+      console.error("Failed to save characters to Supabase during partial update:", err.message || err);
+      setError(`Falha ao atualizar dados do personagem: ${err.message || 'Erro desconhecido'}.`);
+      // Optionally, revert UI changes or re-fetch for consistency
     }
   };
 
-  const handleDeleteCharacter = (characterIdToDelete: string) => {
+  const handleDeleteCharacter = async (characterIdToDelete: string) => {
     if (window.confirm(`Tem certeza que deseja excluir este personagem? Esta ação não pode ser desfeita.`)) {
-      let updatedCharacters = characters.filter(char => char.id !== characterIdToDelete);
-
-      if (updatedCharacters.length === 0) {
-        updatedCharacters = [initialCharacterData]; 
-      }
-      
-      setCharacters(updatedCharacters);
+      setIsLoading(true);
+      setError(null);
       try {
-        localStorage.setItem(LOCAL_STORAGE_CHARACTERS_KEY, JSON.stringify(updatedCharacters));
-      } catch (error) {
-        console.error("Failed to save characters to localStorage after deletion", error);
-      }
+        const success = await supabaseService.deleteCharacter(characterIdToDelete);
+        if (success) {
+          let updatedCharacters = characters.filter(char => char.id !== characterIdToDelete);
+          
+          setCharacters(updatedCharacters);
 
-      if (viewingCharacter && viewingCharacter.id === characterIdToDelete) {
-        setViewingCharacter(null);
-        if (userRole === 'player') setScreen('player_char_list');
+          if (viewingCharacter && viewingCharacter.id === characterIdToDelete) {
+            setViewingCharacter(null);
+            if (userRole === 'player') setScreen('player_char_list');
+          }
+          if (editingCharacter && editingCharacter.id === characterIdToDelete) {
+            setEditingCharacter(null);
+            if (userRole === 'player') setScreen('player_char_list');
+          }
+           // Check if list became empty and if test character needs re-adding
+          if (updatedCharacters.length === 0) {
+            // Attempt to re-add test character if it's missing from Supabase
+            // This ensures the example is always available if the DB is empty
+            const testCharStillExists = await supabaseService.getCharacterById(TEST_CHARACTER_ID);
+            if(!testCharStillExists){
+                console.log("List is empty and test character is missing, re-adding test character to Supabase.");
+                const addedTestChar = await supabaseService.saveCharacter(initialCharacterData);
+                if (addedTestChar) {
+                    setCharacters([addedTestChar]); // update local state
+                }
+            }
+          }
+
+
+        } else {
+          throw new Error("Deletion failed or was not confirmed by the service.");
+        }
+      } catch (err: any) {
+        console.error("Failed to delete character from Supabase:", err.message || err);
+        setError(`Falha ao excluir personagem: ${err.message || 'Erro desconhecido'}.`);
+      } finally {
+        setIsLoading(false);
       }
-      if (editingCharacter && editingCharacter.id === characterIdToDelete) {
-        setEditingCharacter(null);
-        if (userRole === 'player') setScreen('player_char_list');
-      }
-      // If the DM list becomes empty (which it won't due to test char logic), it just re-renders.
     }
   };
 
@@ -225,11 +250,12 @@ const App: React.FC = () => {
     localStorage.removeItem(LOCAL_STORAGE_ROLE_KEY);
   };
 
-  if (!isInitialized) {
-    return <div className="min-h-screen flex items-center justify-center text-xl font-semibold text-black">Carregando...</div>;
+  if (!isInitialized || isLoading && screen === 'role') { // Show loading only if not role screen already
+    return <div className="min-h-screen flex items-center justify-center text-xl font-semibold text-black">Carregando dados...</div>;
   }
-
+  
   let currentView;
+
   switch (screen) {
     case 'role':
       currentView = <RoleSelectionScreen onSelectRole={handleRoleSelect} />;
@@ -296,10 +322,21 @@ const App: React.FC = () => {
         )}
       </header>
 
+      {isLoading && screen !== 'role' && (
+        <div className="text-center my-4 p-4 bg-sky-100 text-sky-700 rounded-md">
+          Carregando...
+        </div>
+      )}
+      {error && (
+        <div className="text-center my-4 p-4 bg-red-100 text-red-700 rounded-md break-words">
+          Erro: {error}
+        </div>
+      )}
+
       {currentView}
 
       <footer className="text-center mt-12 py-4 text-sm text-gray-800">
-        Feito com React e Tailwind CSS.
+        Feito com React e Tailwind CSS. Conectado ao Supabase.
       </footer>
     </div>
   );
