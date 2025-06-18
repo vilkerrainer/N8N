@@ -1,0 +1,6 @@
+{
+  "name": "D&D 5e Character Creator",
+  "description": "A web application for creating and managing Dungeons & Dragons 5th Edition characters. Players can input their character details and view a formatted character sheet. Data is saved locally in the browser.",
+  "requestFramePermissions": [],
+  "prompt": ""
+}
