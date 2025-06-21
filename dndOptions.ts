@@ -29,15 +29,24 @@ export const ALIGNMENTS = [
   "Leal e Mau (LM)", "Neutro e Mau (NM)", "Caótico e Mau (CM)"
 ];
 
-export const FIGHTING_STYLES = [
-  "", // Option for none
-  "Arquearia",
-  "Combate com Armas Grandes",
-  "Combate com Duas Armas",
-  "Defesa",
-  "Duelismo",
-  "Proteção"
+export interface FightingStyleOption {
+  name: string;
+  description: string;
+}
+
+export const FIGHTING_STYLE_OPTIONS: FightingStyleOption[] = [
+  { name: "", description: "Nenhum estilo de luta selecionado." },
+  { name: "Arquearia", description: "Você ganha +2 de bônus nas jogadas de ataque com armas de ataque à distância." },
+  { name: "Combate com Armas Grandes", description: "Quando você rolar um 1 ou 2 num dado de dano de um ataque com arma corpo-a-corpo que você esteja empunhando com duas mãos, você pode rolar o dado novamente e deve usar a nova rolagem, mesmo que o novo resultado seja 1 ou 2. A arma deve ter a propriedade duas mãos ou versátil para ganhar esse benefício." },
+  { name: "Combate com Duas Armas", description: "Quando você estiver engajado em uma luta com duas armas, você pode adicionar seu modificador de habilidade ao dano do segundo ataque." },
+  { name: "Defesa", description: "Enquanto você estiver utilizando uma armadura, você ganha +1 de bônus em sua CA." },
+  { name: "Duelismo", description: "Quando você empunhar uma arma de ataque corpo-a-corpo em uma mão e nenhuma outra arma, você ganha +2 de bônus nas jogadas de dano com essa arma." },
+  { name: "Proteção", description: "Quando uma criatura que você pode ver atacar um alvo que não seja você e esteja a até 1,5 metro de você, você pode usar sua reação para impor desvantagem na jogada de ataque. Você deve estar empunhando um escudo." }
 ];
+
+// This derived array can be used for select options if only names are needed for the value.
+export const FIGHTING_STYLES: string[] = FIGHTING_STYLE_OPTIONS.map(fs => fs.name);
+
 
 export const CLASS_SPELLCASTING_ABILITIES: Record<string, AttributeName | undefined> = {
   "Mago": "intelligence",
@@ -48,7 +57,6 @@ export const CLASS_SPELLCASTING_ABILITIES: Record<string, AttributeName | undefi
   "Bruxo": "charisma",
   "Paladino": "charisma", // Paladinos usam Carisma
   "Patrulheiro": "wisdom", // Patrulheiros usam Sabedoria
-  // Classes sem conjuração primária ou com subclasses específicas (como Guerreiro Arcano ou Ladino Trapaceiro Arcano) podem ser omitidas ou mapeadas para undefined.
   "Bárbaro": undefined,
   "Guerreiro": undefined,
   "Ladino": undefined,

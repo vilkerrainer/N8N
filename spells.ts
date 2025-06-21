@@ -89,7 +89,7 @@ export const ALL_AVAILABLE_SPELLS: Spell[] = [
     range: "18 metros",
     components: "V, S",
     duration: "Instantânea",
-    description: "Radiação similar a uma chama descende sobre uma criatura que você pode ver, dentro do alcance. O alvo deve ser bem sucedido num teste de resistência de Destreza ou sofrerá 1d8 de dano radiante. O alvo não recebe qualquer benefício de cobertura contra esse teste de resistência.",
+    description: "Radiação similar a uma chama descende sobre uma criatura que você cansa ver, dentro do alcance. O alvo deve ser bem sucedido num teste de resistência de Destreza ou sofrerá 1d8 de dano radiante. O alvo não recebe qualquer benefício de cobertura contra esse teste de resistência.",
     classes: ["Clérigo"]
   },
   {

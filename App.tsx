@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { Character, AttributeName } from './types';
 import CharacterForm from './components/CharacterForm';
@@ -7,7 +8,7 @@ import Button from './components/ui/Button';
 import RoleSelectionScreen from './components/RoleSelectionScreen';
 import DMCharacterListView from './components/DMCharacterListView';
 import PlayerCharacterList from './components/PlayerCharacterList';
-import { RACES, CLASSES, BACKGROUNDS, ALIGNMENTS, FIGHTING_STYLES } from './dndOptions';
+import { RACES, CLASSES, BACKGROUNDS, ALIGNMENTS, FIGHTING_STYLE_OPTIONS } from './dndOptions'; // Updated import
 import * as supabaseService from './supabaseService';
 
 const TEST_CHARACTER_ID = "test-pavel-exemplo-001";
@@ -39,7 +40,7 @@ const initialCharacterData: Character = {
   items: 'Arco longo (1d8), 10 flechas, armadura de couro CA+11.\nPedra vermelha.',
   savingThrows: 'Força +2, Destreza +4',
   abilities: 'De manhã vejo isso',
-  fightingStyle: FIGHTING_STYLES[1], 
+  fightingStyle: FIGHTING_STYLE_OPTIONS[1].name, // Use name from options e.g. Arquearia
   magic: {
     spellcastingAbilityName: 'wisdom' as AttributeName,
     spellSaveDC: 12,
@@ -51,7 +52,6 @@ const initialCharacterData: Character = {
 };
 
 const LOCAL_STORAGE_ROLE_KEY = 'dndUserRole';
-// LOCAL_STORAGE_CHARACTERS_KEY is removed as we use Supabase now
 
 type Screen = 'role' | 'dm_list' | 'player_char_list' | 'player_sheet' | 'player_form';
 
@@ -98,8 +98,6 @@ const App: React.FC = () => {
     } catch (err: any) {
       console.error("Failed to load data from Supabase:", err.message || err);
       setError(`Falha ao carregar dados do servidor: ${err.message || 'Erro desconhecido'}. Tente recarregar a página.`);
-      // Fallback: could show test character or an empty state
-      // setCharacters([initialCharacterData]); // Optional: local fallback
     } finally {
       setIsLoading(false);
       setIsInitialized(true);
@@ -145,7 +143,6 @@ const App: React.FC = () => {
   };
   
   const handleUpdateCharacterData = async (characterId: string, updates: Partial<Character>) => {
-    // No separate loading state for this quick action, assume it's fast
     try {
       const updatedCharacter = await supabaseService.updateCharacter(characterId, updates);
       if (updatedCharacter) {
@@ -159,7 +156,6 @@ const App: React.FC = () => {
     } catch (err: any) {
       console.error("Failed to save characters to Supabase during partial update:", err.message || err);
       setError(`Falha ao atualizar dados do personagem: ${err.message || 'Erro desconhecido'}.`);
-      // Optionally, revert UI changes or re-fetch for consistency
     }
   };
 
@@ -182,21 +178,16 @@ const App: React.FC = () => {
             setEditingCharacter(null);
             if (userRole === 'player') setScreen('player_char_list');
           }
-           // Check if list became empty and if test character needs re-adding
           if (updatedCharacters.length === 0) {
-            // Attempt to re-add test character if it's missing from Supabase
-            // This ensures the example is always available if the DB is empty
             const testCharStillExists = await supabaseService.getCharacterById(TEST_CHARACTER_ID);
             if(!testCharStillExists){
                 console.log("List is empty and test character is missing, re-adding test character to Supabase.");
                 const addedTestChar = await supabaseService.saveCharacter(initialCharacterData);
                 if (addedTestChar) {
-                    setCharacters([addedTestChar]); // update local state
+                    setCharacters([addedTestChar]); 
                 }
             }
           }
-
-
         } else {
           throw new Error("Deletion failed or was not confirmed by the service.");
         }
@@ -250,7 +241,7 @@ const App: React.FC = () => {
     localStorage.removeItem(LOCAL_STORAGE_ROLE_KEY);
   };
 
-  if (!isInitialized || isLoading && screen === 'role') { // Show loading only if not role screen already
+  if (!isInitialized || isLoading && screen === 'role') { 
     return <div className="min-h-screen flex items-center justify-center text-xl font-semibold text-black">Carregando dados...</div>;
   }
   

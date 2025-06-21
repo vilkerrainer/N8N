@@ -1,10 +1,13 @@
 
+
 import React, { useState } from 'react';
-import { Character, ATTRIBUTE_NAMES, ATTRIBUTE_LABELS, AttributeName, MagicInfo } from '../types';
+import { Character, ATTRIBUTE_NAMES, ATTRIBUTE_LABELS, AttributeName, MagicInfo, Spell } from '../types';
 import AttributeField, { calculateModifier, formatModifier } from './AttributeField';
 import Button from './ui/Button';
 import Input from './ui/Input'; // For quick actions
 import { ALL_SKILLS, calculateProficiencyBonus, SkillDefinition } from '../skills';
+import { FIGHTING_STYLE_OPTIONS } from '../dndOptions'; 
+import { ALL_SPELLS_MAP } from '../spells'; // Import map of all spells
 
 interface CharacterSheetDisplayProps {
   character: Character;
@@ -15,8 +18,8 @@ interface CharacterSheetDisplayProps {
 
 const CharacterSheetDisplay: React.FC<CharacterSheetDisplayProps> = ({ character, onEdit, onBackToList, onCharacterUpdate }) => {
   const [healAmount, setHealAmount] = useState<string>('');
-  // const [damageAmount, setDamageAmount] = useState<string>(''); // Removed
   const [newItem, setNewItem] = useState<string>('');
+  const [expandedSpellName, setExpandedSpellName] = useState<string | null>(null);
 
   const Section: React.FC<{ title: string; children: React.ReactNode; className?: string }> = ({ title, children, className }) => (
     <div className={`mb-6 p-4 bg-slate-50 rounded-lg shadow ${className}`}>
@@ -31,6 +34,7 @@ const CharacterSheetDisplay: React.FC<CharacterSheetDisplayProps> = ({ character
 
   const proficiencyBonus = calculateProficiencyBonus(character.level);
   const magicInfo = character.magic || { spellSlots: Array(9).fill(0), cantripsKnown: [], spellsKnownPrepared: [], spellbook: [] } as MagicInfo;
+  const fightingStyleObj = FIGHTING_STYLE_OPTIONS.find(fs => fs.name === character.fightingStyle);
 
   let calculatedSpellSaveDC: number | null = null;
   let calculatedSpellAttackBonus: number | null = null;
@@ -43,10 +47,57 @@ const CharacterSheetDisplay: React.FC<CharacterSheetDisplayProps> = ({ character
     spellcastingAbilityLabel = ATTRIBUTE_LABELS[magicInfo.spellcastingAbilityName];
   }
 
-  const displaySpellArray = (spells: string[] | undefined) => {
-    if (!spells || spells.length === 0) return 'Nenhum';
-    return spells.join(', ');
+  const renderSpellDetails = (spell: Spell) => (
+    <div className="mt-2 p-3 bg-sky-50 rounded text-xs text-black space-y-1 shadow-inner">
+      <p><strong>Nível:</strong> {spell.level === 0 ? "Truque" : spell.level}</p>
+      <p><strong>Escola:</strong> {spell.school}</p>
+      <p><strong>Tempo de Conjuração:</strong> {spell.castingTime}</p>
+      <p><strong>Alcance:</strong> {spell.range}</p>
+      <p><strong>Componentes:</strong> {spell.components}</p>
+      <p><strong>Duração:</strong> {spell.duration}</p>
+      <p className="mt-1 whitespace-pre-wrap text-justify"><strong>Descrição:</strong> {spell.description}</p>
+    </div>
+  );
+
+  const displaySpellListWithDetails = (spellNames: string[] | undefined, listTitle: string) => {
+    if (!spellNames || spellNames.length === 0) {
+      return (
+        <div className="mt-3">
+          <h4 className="font-semibold text-gray-700">{listTitle}:</h4>
+          <p className="text-black">Nenhuma</p>
+        </div>
+      );
+    }
+    return (
+      <div className="mt-3">
+        <h4 className="font-semibold text-gray-700">{listTitle}:</h4>
+        <ul className="list-disc list-inside text-black space-y-1">
+          {spellNames.map(spellName => {
+            const spell = ALL_SPELLS_MAP[spellName];
+            const spellIdSafe = spellName.replace(/\W/g, '-');
+            return (
+              <li key={spellIdSafe}>
+                <button
+                  onClick={() => setExpandedSpellName(expandedSpellName === spellName ? null : spellName)}
+                  className="text-sky-600 hover:text-sky-800 hover:underline focus:outline-none"
+                  aria-expanded={expandedSpellName === spellName}
+                  aria-controls={`details-sheet-${spellIdSafe}`}
+                >
+                  {spellName}
+                </button>
+                {expandedSpellName === spellName && spell && (
+                  <div id={`details-sheet-${spellIdSafe}`}>
+                    {renderSpellDetails(spell)}
+                  </div>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      </div>
+    );
   };
+
 
   const handleHeal = () => {
     if (!onCharacterUpdate || !healAmount) return;
@@ -56,16 +107,6 @@ const CharacterSheetDisplay: React.FC<CharacterSheetDisplayProps> = ({ character
     onCharacterUpdate(character.id, { hp: newHp });
     setHealAmount('');
   };
-
-  // Removed handleTakeDamage
-  // const handleTakeDamage = () => {
-  //   if (!onCharacterUpdate || !damageAmount) return;
-  //   const amount = parseInt(damageAmount, 10);
-  //   if (isNaN(amount) || amount <= 0) return;
-  //   const newHp = Math.max(0, character.hp - amount);
-  //   onCharacterUpdate(character.id, { hp: newHp });
-  //   setDamageAmount('');
-  // };
 
   const handleAddItem = () => {
     if (!onCharacterUpdate || !newItem.trim()) return;
@@ -124,10 +165,9 @@ const CharacterSheetDisplay: React.FC<CharacterSheetDisplayProps> = ({ character
         </div>
       </div>
       
-      {/* Quick Actions for Player */}
-      {onCharacterUpdate && onBackToList && (
+      {onCharacterUpdate && onBackToList && ( // Only show if it's player's own sheet from list view
         <Section title="Ações Rápidas">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end"> {/* Changed md:grid-cols-3 to md:grid-cols-2 */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
             <div>
               <Input 
                 label="Curar HP" 
@@ -139,20 +179,6 @@ const CharacterSheetDisplay: React.FC<CharacterSheetDisplayProps> = ({ character
               />
               <Button onClick={handleHeal} variant="primary" className="w-full mt-1">Curar</Button>
             </div>
-            {/* Removed Take Damage Section */}
-            {/*
-            <div>
-              <Input 
-                label="Tomar Dano" 
-                type="number" 
-                value={damageAmount} 
-                onChange={(e) => setDamageAmount(e.target.value)}
-                placeholder="Quantidade"
-                id={`damage-${character.id}`}
-              />
-              <Button onClick={handleTakeDamage} variant="primary" className="w-full mt-1 bg-red-600 hover:bg-red-700 focus:ring-red-500">Tomar Dano</Button>
-            </div>
-            */}
             <div>
               <Input 
                 label="Adicionar Item" 
@@ -182,7 +208,8 @@ const CharacterSheetDisplay: React.FC<CharacterSheetDisplayProps> = ({ character
         </Section>
 
         <Section title="Perícias">
-          <div className="grid grid-cols-1 gap-2">
+          <InfoItem label="Bônus de Proficiência" value={formatModifier(proficiencyBonus)} />
+          <div className="grid grid-cols-1 gap-2 mt-2">
             {ALL_SKILLS.map((skill: SkillDefinition) => {
               const attributeScore = character.attributes[skill.attribute];
               const attributeModifier = calculateModifier(attributeScore);
@@ -219,11 +246,20 @@ const CharacterSheetDisplay: React.FC<CharacterSheetDisplayProps> = ({ character
         </Section>
       )}
 
-      {character.fightingStyle && (
+      {character.fightingStyle && fightingStyleObj && fightingStyleObj.name !== "" && (
         <Section title="Estilo de Luta">
-          <p className="text-black whitespace-pre-wrap">{character.fightingStyle}</p>
+          <p className="text-black font-semibold">{character.fightingStyle}</p>
+          {fightingStyleObj.description && (
+            <p className="text-sm text-gray-700 mt-1 whitespace-pre-wrap text-justify">{fightingStyleObj.description}</p>
+          )}
         </Section>
       )}
+       {character.fightingStyle === "" && fightingStyleObj && ( // Handles case where "" is selected
+         <Section title="Estilo de Luta">
+            <p className="text-black">Nenhum</p>
+         </Section>
+        )}
+
 
       {magicInfo && (
         <Section title="Magia">
@@ -232,28 +268,21 @@ const CharacterSheetDisplay: React.FC<CharacterSheetDisplayProps> = ({ character
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4">
             <div>
                 {calculatedSpellSaveDC !== null && <InfoItem label="CD (Calculado)" value={calculatedSpellSaveDC} />}
-                <InfoItem label="CD Magia (Informado)" value={magicInfo.spellSaveDC} />
+                <InfoItem label="CD Magia (Informado)" value={magicInfo.spellSaveDC > 0 ? magicInfo.spellSaveDC : (calculatedSpellSaveDC || 'N/A')} />
             </div>
             <div>
                 {calculatedSpellAttackBonus !== null && <InfoItem label="Bônus Ataque (Calculado)" value={formatModifier(calculatedSpellAttackBonus)} />}
-                <InfoItem label="Bônus Ataque Mágico (Informado)" value={formatModifier(magicInfo.spellAttackBonus)} />
+                <InfoItem label="Bônus Ataque Mágico (Informado)" value={magicInfo.spellAttackBonus !== 0 ? formatModifier(magicInfo.spellAttackBonus) : (calculatedSpellAttackBonus !== null ? formatModifier(calculatedSpellAttackBonus) : 'N/A')} />
             </div>
           </div>
           
-          <div className="mt-3">
-            <h4 className="font-semibold text-gray-700">Truques Conhecidos:</h4>
-            <p className="text-black whitespace-pre-wrap">{displaySpellArray(magicInfo.cantripsKnown)}</p>
-          </div>
-          {character.charClass === 'Mago' && magicInfo.spellbook && (
-            <div className="mt-3">
-              <h4 className="font-semibold text-gray-700">Grimório:</h4>
-              <p className="text-black whitespace-pre-wrap">{displaySpellArray(magicInfo.spellbook)}</p>
-            </div>
-          )}
-          <div className="mt-3">
-            <h4 className="font-semibold text-gray-700">Magias Conhecidas/Preparadas:</h4>
-             <p className="text-black whitespace-pre-wrap">{displaySpellArray(magicInfo.spellsKnownPrepared)}</p>
-          </div>
+          {displaySpellListWithDetails(magicInfo.cantripsKnown, "Truques Conhecidos")}
+          
+          {character.charClass === 'Mago' && magicInfo.spellbook && 
+            displaySpellListWithDetails(magicInfo.spellbook, "Grimório")}
+
+          {displaySpellListWithDetails(magicInfo.spellsKnownPrepared, "Magias Conhecidas/Preparadas")}
+
           <div className="mt-3">
             <h4 className="font-semibold text-gray-700 mb-1">Espaços de Magia por Nível:</h4>
             <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">

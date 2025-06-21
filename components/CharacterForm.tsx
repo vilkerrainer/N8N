@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Character, AttributeName, ATTRIBUTE_NAMES, ATTRIBUTE_LABELS, MagicInfo, Spell } from '../types';
 import { ALL_SKILLS, SkillDefinition, calculateProficiencyBonus } from '../skills';
-import { RACES, CLASSES, BACKGROUNDS, ALIGNMENTS, FIGHTING_STYLES, CLASS_SPELLCASTING_ABILITIES } from '../dndOptions';
+import { RACES, CLASSES, BACKGROUNDS, ALIGNMENTS, FIGHTING_STYLE_OPTIONS, CLASS_SPELLCASTING_ABILITIES } from '../dndOptions'; // Updated import
 import { ALL_AVAILABLE_SPELLS, getCantripsByClass, getSpellsByClassAndLevel } from '../spells'; 
 import { 
   getClassSpellSlots, 
@@ -49,7 +49,7 @@ const initialCharacterValues: Omit<Character, 'id' | 'magic'> & { id?: string; m
   items: '',
   savingThrows: '',
   abilities: '',
-  fightingStyle: FIGHTING_STYLES[0],
+  fightingStyle: FIGHTING_STYLE_OPTIONS[0].name, // Use name from options
   magic: {
     spellcastingAbilityName: undefined,
     spellSaveDC: 0,
@@ -82,6 +82,11 @@ const CharacterForm: React.FC<CharacterFormProps> = ({ onSave, initialData }) =>
     if (baseData.charClass && baseData.level) {
         baseData.magic.spellSlots = getClassSpellSlots(baseData.charClass, baseData.level);
     }
+    // Ensure fightingStyle is initialized correctly if initialData exists but has an old/empty style
+    if (!FIGHTING_STYLE_OPTIONS.some(fso => fso.name === baseData.fightingStyle)) {
+        baseData.fightingStyle = FIGHTING_STYLE_OPTIONS[0].name;
+    }
+
 
     return baseData;
   });
@@ -99,6 +104,7 @@ const CharacterForm: React.FC<CharacterFormProps> = ({ onSave, initialData }) =>
 
   const [calculatedSpellSaveDC, setCalculatedSpellSaveDC] = useState<number | null>(null);
   const [calculatedSpellAttackBonus, setCalculatedSpellAttackBonus] = useState<string | null>(null);
+  const [selectedFightingStyleDescription, setSelectedFightingStyleDescription] = useState<string>('');
 
 
   useEffect(() => {
@@ -120,8 +126,17 @@ const CharacterForm: React.FC<CharacterFormProps> = ({ onSave, initialData }) =>
     if (baseData.charClass && baseData.level) {
         baseData.magic.spellSlots = getClassSpellSlots(baseData.charClass, baseData.level);
     }
+     // Ensure fightingStyle is initialized correctly if initialData exists but has an old/empty style
+    if (!FIGHTING_STYLE_OPTIONS.some(fso => fso.name === baseData.fightingStyle)) {
+        baseData.fightingStyle = FIGHTING_STYLE_OPTIONS[0].name;
+    }
     setFormData(baseData);
   }, [initialData]);
+
+  useEffect(() => {
+    const style = FIGHTING_STYLE_OPTIONS.find(fs => fs.name === formData.fightingStyle);
+    setSelectedFightingStyleDescription(style ? style.description : (FIGHTING_STYLE_OPTIONS[0]?.description || ''));
+  }, [formData.fightingStyle]);
 
 
   useEffect(() => {
@@ -428,8 +443,8 @@ const CharacterForm: React.FC<CharacterFormProps> = ({ onSave, initialData }) =>
     </div>
   );
 
-  const StringSelectInput: React.FC<{label: string, name: keyof Character | string, value: string, options: string[], onChange: (e: React.ChangeEvent<HTMLSelectElement>) => void}> = 
-  ({label, name, value, options, onChange}) => (
+  const StringSelectInput: React.FC<{label: string, name: keyof Character | string, value: string, options: string[], onChange: (e: React.ChangeEvent<HTMLSelectElement>) => void, required?: boolean}> = 
+  ({label, name, value, options, onChange, required = false}) => (
   <div className="mb-4">
     <label htmlFor={name} className="block text-sm font-medium text-black mb-1">
       {label}
@@ -440,10 +455,10 @@ const CharacterForm: React.FC<CharacterFormProps> = ({ onSave, initialData }) =>
       value={value}
       onChange={onChange}
       className="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm text-black"
-      required
+      required={required}
     >
       {options.map(option => (
-        <option key={option} value={option}>{option}</option>
+        <option key={option} value={option}>{option || "Nenhum"}</option> // Display "Nenhum" for empty string option
       ))}
     </select>
   </div>
@@ -504,9 +519,9 @@ const CharacterForm: React.FC<CharacterFormProps> = ({ onSave, initialData }) =>
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Input label="Nome do Personagem" name="name" value={formData.name} onChange={handleChange} required />
-        <StringSelectInput label="Raça" name="race" value={formData.race} onChange={handleChange} options={RACES} />
-        <StringSelectInput label="Classe" name="charClass" value={formData.charClass} onChange={handleChange} options={CLASSES} />
-        <StringSelectInput label="Antecedentes" name="background" value={formData.background} onChange={handleChange} options={BACKGROUNDS} />
+        <StringSelectInput label="Raça" name="race" value={formData.race} onChange={handleChange} options={RACES} required/>
+        <StringSelectInput label="Classe" name="charClass" value={formData.charClass} onChange={handleChange} options={CLASSES} required/>
+        <StringSelectInput label="Antecedentes" name="background" value={formData.background} onChange={handleChange} options={BACKGROUNDS} required/>
         
         <div className="mb-4 md:col-span-2">
           <label htmlFor="photoUrlFile" className="block text-sm font-medium text-black mb-1">
@@ -536,7 +551,7 @@ const CharacterForm: React.FC<CharacterFormProps> = ({ onSave, initialData }) =>
         </div>
 
         <Input label="Idade" name="age" type="number" value={formData.age} onChange={handleChange} />
-        <StringSelectInput label="Tendência" name="alignment" value={formData.alignment} onChange={handleChange} options={ALIGNMENTS} />
+        <StringSelectInput label="Tendência" name="alignment" value={formData.alignment} onChange={handleChange} options={ALIGNMENTS} required/>
         <Input label="Nível" name="level" type="number" value={formData.level} onChange={handleChange} min="1" />
       </div>
 
@@ -590,7 +605,21 @@ const CharacterForm: React.FC<CharacterFormProps> = ({ onSave, initialData }) =>
       <Textarea label="Inventário (Itens)" name="items" value={formData.items} onChange={handleChange} />
       <Textarea label="Habilidades da Classe/Raça" name="abilities" value={formData.abilities} onChange={handleChange} />
       
-      <StringSelectInput label="Estilo de Luta" name="fightingStyle" value={formData.fightingStyle} onChange={handleChange} options={FIGHTING_STYLES} />
+      <div>
+        <StringSelectInput 
+            label="Estilo de Luta" 
+            name="fightingStyle" 
+            value={formData.fightingStyle} 
+            onChange={handleChange} 
+            options={FIGHTING_STYLE_OPTIONS.map(opt => opt.name)} 
+        />
+        {selectedFightingStyleDescription && formData.fightingStyle && (
+            <div className="mt-2 p-3 bg-sky-50 rounded text-sm text-black shadow-inner">
+                <p className="font-semibold">Descrição do Estilo de Luta:</p>
+                <p className="whitespace-pre-wrap text-justify">{selectedFightingStyleDescription}</p>
+            </div>
+        )}
+      </div>
       
       {/* --- MAGIC SECTION --- */}
       <div className="p-4 border border-slate-300 rounded-lg shadow-sm">

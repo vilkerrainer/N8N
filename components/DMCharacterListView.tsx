@@ -1,8 +1,12 @@
 
+
 import React, { useState } from 'react';
-import { Character } from '../types';
+import { Character, ATTRIBUTE_NAMES, ATTRIBUTE_LABELS, AttributeName } from '../types';
 import Button from './ui/Button'; 
 import Input from './ui/Input';   
+import AttributeField, { calculateModifier, formatModifier } from './AttributeField';
+import { ALL_SKILLS, SkillDefinition, calculateProficiencyBonus } from '../skills';
+
 
 interface DMCharacterListViewProps {
   characters: Character[];
@@ -12,6 +16,8 @@ interface DMCharacterListViewProps {
 
 const DMCharacterListView: React.FC<DMCharacterListViewProps> = ({ characters, onDMUpdateCharacter, onDeleteCharacter }) => {
   const [dmInputs, setDmInputs] = useState<Record<string, { chargeAmount: string; damageAmount: string }>>({});
+  const [showAttributes, setShowAttributes] = useState<boolean>(true);
+  const [showSkills, setShowSkills] = useState<boolean>(false);
 
   const handleInputChange = (charId: string, field: 'chargeAmount' | 'damageAmount', value: string) => {
     setDmInputs(prev => ({
@@ -57,77 +63,128 @@ const DMCharacterListView: React.FC<DMCharacterListViewProps> = ({ characters, o
 
   return (
     <div className="max-w-5xl mx-auto my-8 p-6">
-      <h2 className="text-3xl font-bold text-sky-800 mb-8 text-center">Visão do Mestre - Personagens Criados</h2>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {characters.map((char) => (
-          <div key={char.id} className="bg-white p-6 rounded-lg shadow-lg hover:shadow-2xl transition-shadow duration-300 flex flex-col">
-            <div className="flex items-center mb-4">
-              <img 
-                src={char.photoUrl || 'https://picsum.photos/100'} 
-                alt={char.name} 
-                className="w-16 h-16 rounded-full mr-4 object-cover flex-shrink-0"
-                onError={(e) => (e.currentTarget.src = 'https://picsum.photos/100')}
-              />
-              <div>
-                <h3 className="text-xl font-bold text-sky-700">{char.name}</h3>
-                <p className="text-sm text-gray-700">{char.race} / {char.charClass} / Nível {char.level}</p>
-              </div>
-            </div>
-            <div className="space-y-2 text-sm mb-4 flex-grow">
-              <div className="flex justify-between p-2 bg-slate-50 rounded">
-                <span className="font-semibold text-gray-700">HP:</span>
-                <span className="text-black">{char.hp} / {char.hpt}</span>
-              </div>
-              <div className="flex justify-between p-2 bg-slate-50 rounded">
-                <span className="font-semibold text-gray-700">CA:</span>
-                <span className="text-black">{char.ac}</span>
-              </div>
-              <div className="flex justify-between p-2 bg-slate-50 rounded">
-                <span className="font-semibold text-gray-700">Moedas:</span>
-                <span className="text-black">{char.coins}</span>
-              </div>
-            </div>
+      <h2 className="text-3xl font-bold text-sky-800 mb-6 text-center">Visão do Mestre - Personagens Criados</h2>
+      
+      <div className="mb-6 flex justify-center space-x-4">
+        <Button onClick={() => setShowAttributes(!showAttributes)} variant="secondary">
+            {showAttributes ? 'Ocultar' : 'Mostrar'} Atributos
+        </Button>
+        <Button onClick={() => setShowSkills(!showSkills)} variant="secondary">
+            {showSkills ? 'Ocultar' : 'Mostrar'} Perícias
+        </Button>
+      </div>
 
-            {onDMUpdateCharacter && (
-              <div className="mt-4 border-t pt-4 space-y-3">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {characters.map((char) => {
+          const proficiencyBonus = calculateProficiencyBonus(char.level);
+          return (
+            <div key={char.id} className="bg-white p-6 rounded-lg shadow-lg hover:shadow-2xl transition-shadow duration-300 flex flex-col">
+              <div className="flex items-center mb-4">
+                <img 
+                  src={char.photoUrl || 'https://picsum.photos/100'} 
+                  alt={char.name} 
+                  className="w-16 h-16 rounded-full mr-4 object-cover flex-shrink-0"
+                  onError={(e) => (e.currentTarget.src = 'https://picsum.photos/100')}
+                />
                 <div>
-                  <Input
-                    label="Cobrar Moedas"
-                    id={`charge-${char.id}`}
-                    type="number"
-                    value={dmInputs[char.id]?.chargeAmount || ''}
-                    onChange={(e) => handleInputChange(char.id, 'chargeAmount', e.target.value)}
-                    placeholder="Quantidade"
-                    className="text-xs py-1"
-                  />
-                  <Button onClick={() => handleChargePlayer(char)} variant="secondary" className="w-full mt-1 text-xs py-1">Cobrar</Button>
-                </div>
-                <div>
-                  <Input
-                    label="Dar Dano"
-                    id={`damage-${char.id}`}
-                    type="number"
-                    value={dmInputs[char.id]?.damageAmount || ''}
-                    onChange={(e) => handleInputChange(char.id, 'damageAmount', e.target.value)}
-                    placeholder="Quantidade"
-                    className="text-xs py-1"
-                  />
-                  <Button onClick={() => handleDealDamageToPlayer(char)} variant="secondary" className="w-full mt-1 text-xs py-1 bg-orange-500 hover:bg-orange-600 text-white focus:ring-orange-400">Dar Dano</Button>
+                  <h3 className="text-xl font-bold text-sky-700">{char.name}</h3>
+                  <p className="text-sm text-gray-700">{char.race} / {char.charClass} / Nível {char.level}</p>
                 </div>
               </div>
-            )}
-             <div className="mt-4 border-t pt-4">
-                <Button 
-                    onClick={() => onDeleteCharacter(char.id)} 
-                    variant="secondary" 
-                    className="w-full text-xs py-1.5 bg-red-500 hover:bg-red-600 text-white focus:ring-red-400"
-                    title={`Excluir ${char.name}`}
-                >
-                    Excluir Personagem
-                </Button>
+              <div className="space-y-2 text-sm mb-4 flex-grow">
+                <div className="flex justify-between p-2 bg-slate-50 rounded">
+                  <span className="font-semibold text-gray-700">HP:</span>
+                  <span className="text-black">{char.hp} / {char.hpt}</span>
+                </div>
+                <div className="flex justify-between p-2 bg-slate-50 rounded">
+                  <span className="font-semibold text-gray-700">CA:</span>
+                  <span className="text-black">{char.ac}</span>
+                </div>
+                <div className="flex justify-between p-2 bg-slate-50 rounded">
+                  <span className="font-semibold text-gray-700">Moedas:</span>
+                  <span className="text-black">{char.coins}</span>
+                </div>
+
+                {showAttributes && (
+                  <div className="mt-3 pt-3 border-t border-slate-200">
+                    <h4 className="text-sm font-semibold text-gray-600 mb-1">Atributos:</h4>
+                    <div className="grid grid-cols-1 gap-1">
+                      {ATTRIBUTE_NAMES.map(attrName => (
+                        <AttributeField
+                          key={attrName}
+                          label={ATTRIBUTE_LABELS[attrName]}
+                          score={char.attributes[attrName]}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {showSkills && (
+                  <div className="mt-3 pt-3 border-t border-slate-200">
+                    <h4 className="text-sm font-semibold text-gray-600 mb-1">Perícias: <span className="text-xs font-normal">(Bônus Prof: {formatModifier(proficiencyBonus)})</span></h4>
+                    <div className="text-xs space-y-1 max-h-48 overflow-y-auto pr-1">
+                      {ALL_SKILLS.map((skill: SkillDefinition) => {
+                        const attributeScore = char.attributes[skill.attribute];
+                        const attributeModifier = calculateModifier(attributeScore);
+                        const isProficient = char.proficientSkills.includes(skill.key);
+                        const skillModifier = attributeModifier + (isProficient ? proficiencyBonus : 0);
+                        return (
+                          <div key={skill.key} className={`flex justify-between items-center p-1 rounded ${isProficient ? 'bg-sky-50 shadow-sm' : 'bg-slate-50'}`}>
+                            <span className={` ${isProficient ? 'text-sky-700 font-semibold' : 'text-black'}`}>
+                              {isProficient && <span title="Proficiente">● </span>}{skill.label} 
+                              <span className="text-gray-500 text-xs ml-1">({ATTRIBUTE_LABELS[skill.attribute].substring(0,3)})</span>
+                            </span>
+                            <span className={`px-2 py-0.5 rounded text-xs ${isProficient ? 'text-sky-900 bg-sky-200 font-bold' : 'text-black bg-slate-200'}`}>{formatModifier(skillModifier)}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {onDMUpdateCharacter && (
+                <div className="mt-4 border-t pt-4 space-y-3">
+                  <div>
+                    <Input
+                      label="Cobrar Moedas"
+                      id={`charge-${char.id}`}
+                      type="number"
+                      value={dmInputs[char.id]?.chargeAmount || ''}
+                      onChange={(e) => handleInputChange(char.id, 'chargeAmount', e.target.value)}
+                      placeholder="Quantidade"
+                      className="text-xs py-1"
+                    />
+                    <Button onClick={() => handleChargePlayer(char)} variant="secondary" className="w-full mt-1 text-xs py-1">Cobrar</Button>
+                  </div>
+                  <div>
+                    <Input
+                      label="Dar Dano"
+                      id={`damage-${char.id}`}
+                      type="number"
+                      value={dmInputs[char.id]?.damageAmount || ''}
+                      onChange={(e) => handleInputChange(char.id, 'damageAmount', e.target.value)}
+                      placeholder="Quantidade"
+                      className="text-xs py-1"
+                    />
+                    <Button onClick={() => handleDealDamageToPlayer(char)} variant="secondary" className="w-full mt-1 text-xs py-1 bg-orange-500 hover:bg-orange-600 text-white focus:ring-orange-400">Dar Dano</Button>
+                  </div>
+                </div>
+              )}
+               <div className="mt-4 border-t pt-4">
+                  <Button 
+                      onClick={() => onDeleteCharacter(char.id)} 
+                      variant="secondary" 
+                      className="w-full text-xs py-1.5 bg-red-500 hover:bg-red-600 text-white focus:ring-red-400"
+                      title={`Excluir ${char.name}`}
+                  >
+                      Excluir Personagem
+                  </Button>
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
