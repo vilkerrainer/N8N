@@ -16,7 +16,7 @@ const TEST_CHARACTER_ID = "test-pavel-exemplo-001";
 const initialCharacterData: Character = {
   id: TEST_CHARACTER_ID,
   photoUrl: 'https://picsum.photos/300/400',
-  name: 'Pavel Exemplo (Supabase)', // Updated name for clarity
+  name: 'Pavel', // Updated name for clarity
   background: BACKGROUNDS[12], 
   race: RACES[7], 
   charClass: CLASSES[11], 
