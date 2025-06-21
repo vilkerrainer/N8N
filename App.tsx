@@ -1,5 +1,4 @@
 
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { Character, AttributeName } from './types';
 import CharacterForm from './components/CharacterForm';
@@ -8,15 +7,16 @@ import Button from './components/ui/Button';
 import RoleSelectionScreen from './components/RoleSelectionScreen';
 import DMCharacterListView from './components/DMCharacterListView';
 import PlayerCharacterList from './components/PlayerCharacterList';
-import { RACES, CLASSES, BACKGROUNDS, ALIGNMENTS, FIGHTING_STYLE_OPTIONS } from './dndOptions'; // Updated import
+import { RACES, CLASSES, BACKGROUNDS, ALIGNMENTS, FIGHTING_STYLE_OPTIONS } from './dndOptions'; 
 import * as supabaseService from './supabaseService';
+import { RealtimeChannel } from '@supabase/supabase-js';
 
 const TEST_CHARACTER_ID = "test-pavel-exemplo-001";
 
 const initialCharacterData: Character = {
   id: TEST_CHARACTER_ID,
   photoUrl: 'https://picsum.photos/300/400',
-  name: 'Pavel', // Updated name for clarity
+  name: 'Pavel Exemplo (Supabase)',
   background: BACKGROUNDS[12], 
   race: RACES[7], 
   charClass: CLASSES[11], 
@@ -40,7 +40,7 @@ const initialCharacterData: Character = {
   items: 'Arco longo (1d8), 10 flechas, armadura de couro CA+11.\nPedra vermelha.',
   savingThrows: 'Força +2, Destreza +4',
   abilities: 'De manhã vejo isso',
-  fightingStyle: FIGHTING_STYLE_OPTIONS[1].name, // Use name from options e.g. Arquearia
+  fightingStyle: FIGHTING_STYLE_OPTIONS[1].name, 
   magic: {
     spellcastingAbilityName: 'wisdom' as AttributeName,
     spellSaveDC: 12,
@@ -52,8 +52,10 @@ const initialCharacterData: Character = {
 };
 
 const LOCAL_STORAGE_ROLE_KEY = 'dndUserRole';
+const LOCAL_STORAGE_THEME_KEY = 'dndAppTheme';
 
 type Screen = 'role' | 'dm_list' | 'player_char_list' | 'player_sheet' | 'player_form';
+type Theme = 'light' | 'dark';
 
 const App: React.FC = () => {
   const [userRole, setUserRole] = useState<string | null>(null);
@@ -64,6 +66,25 @@ const App: React.FC = () => {
   const [isInitialized, setIsInitialized] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [theme, setTheme] = useState<Theme>(() => {
+    const savedTheme = localStorage.getItem(LOCAL_STORAGE_THEME_KEY) as Theme | null;
+    return savedTheme || 'light';
+  });
+
+  let characterSubscription: RealtimeChannel | null = null;
+
+  useEffect(() => {
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+    localStorage.setItem(LOCAL_STORAGE_THEME_KEY, theme);
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme(prevTheme => prevTheme === 'light' ? 'dark' : 'light');
+  };
 
   const loadData = useCallback(async () => {
     setIsLoading(true);
@@ -108,6 +129,28 @@ const App: React.FC = () => {
     loadData();
   }, [loadData]);
 
+  // Real-time subscription for viewingCharacter
+  useEffect(() => {
+    if (screen === 'player_sheet' && viewingCharacter) {
+      characterSubscription = supabaseService.subscribeToCharacterUpdates(
+        viewingCharacter.id,
+        (updatedCharacter) => {
+          setViewingCharacter(updatedCharacter);
+          // Optionally update the main list if needed, though DM updates already do.
+          setCharacters(prevChars => prevChars.map(c => c.id === updatedCharacter.id ? updatedCharacter : c));
+        }
+      );
+    }
+
+    return () => {
+      if (characterSubscription) {
+        supabaseService.unsubscribeFromChannel(characterSubscription);
+        characterSubscription = null;
+      }
+    };
+  }, [screen, viewingCharacter]);
+
+
   const handleCharacterSave = async (charToSave: Character) => {
     setIsLoading(true);
     setError(null);
@@ -147,8 +190,14 @@ const App: React.FC = () => {
       const updatedCharacter = await supabaseService.updateCharacter(characterId, updates);
       if (updatedCharacter) {
         setCharacters(prevChars => prevChars.map(c => c.id === characterId ? updatedCharacter : c));
+        // If the player is viewing this character, their real-time subscription will update it.
+        // However, if the DM is also viewing (e.g. via a different mechanism not built yet) or if this update affects a list
+        // the player is on, this direct update to viewingCharacter is still good.
         if (viewingCharacter && viewingCharacter.id === characterId) {
-          setViewingCharacter(updatedCharacter);
+           // The subscription should handle this, but as a fallback or for immediate UI consistency:
+           // setViewingCharacter(updatedCharacter); 
+           // Given the subscription handles viewingCharacter, this might not be strictly needed here anymore,
+           // but won't harm. The subscription is the primary mechanism for player_sheet.
         }
       } else {
          console.warn("Character not found for update or no data returned:", characterId);
@@ -242,7 +291,7 @@ const App: React.FC = () => {
   };
 
   if (!isInitialized || isLoading && screen === 'role') { 
-    return <div className="min-h-screen flex items-center justify-center text-xl font-semibold text-black">Carregando dados...</div>;
+    return <div className="min-h-screen flex items-center justify-center text-xl font-semibold text-black dark:text-slate-200">Carregando dados...</div>;
   }
   
   let currentView;
@@ -282,13 +331,13 @@ const App: React.FC = () => {
               character={viewingCharacter}
               onEdit={() => viewingCharacter && handlePlayerEditCharacter(viewingCharacter)}
               onBackToList={handleNavigateToList}
-              onCharacterUpdate={handleUpdateCharacterData}
+              onCharacterUpdate={handleUpdateCharacterData} // This is for DM/quick actions on player sheet if they own it
             />
         );
       } else { 
          currentView = (
             <div className="text-center">
-                <p className="text-black text-xl mb-4">Nenhum personagem para exibir.</p>
+                <p className="text-black dark:text-slate-200 text-xl mb-4">Nenhum personagem para exibir.</p>
                 <Button onClick={handleNavigateToList}>
                     Voltar para Lista de Personagens
                 </Button>
@@ -302,10 +351,15 @@ const App: React.FC = () => {
 
 
   return (
-    <div className="min-h-screen bg-slate-200 py-8 px-4">
+    <div className="min-h-screen bg-slate-200 dark:bg-slate-900 py-8 px-4 transition-colors duration-300">
       <header className="text-center mb-10">
-        <h1 className="text-5xl font-bold text-sky-700 tracking-tight">Criador de Personagens D&amp;D 5e</h1>
-        <p className="text-gray-900 mt-2">Crie e gerencie seus heróis de aventura!</p>
+        <div className="flex justify-center items-center mb-2 space-x-4">
+            <h1 className="text-5xl font-bold text-sky-700 dark:text-sky-400 tracking-tight">Criador de Personagens D&amp;D 5e</h1>
+            <Button onClick={toggleTheme} variant="secondary" className="px-3 py-1.5 text-sm">
+                {theme === 'light' ? '🌙 Dark' : '☀️ Light'} Mode
+            </Button>
+        </div>
+        <p className="text-gray-900 dark:text-slate-300 mt-2">Crie e gerencie seus heróis de aventura!</p>
         {userRole && (
           <Button onClick={handleChangeRole} variant="secondary" className="mt-4">
             Mudar Papel (Mestre/Jogador)
@@ -314,20 +368,20 @@ const App: React.FC = () => {
       </header>
 
       {isLoading && screen !== 'role' && (
-        <div className="text-center my-4 p-4 bg-sky-100 text-sky-700 rounded-md">
+        <div className="text-center my-4 p-4 bg-sky-100 dark:bg-sky-800 text-sky-700 dark:text-sky-300 rounded-md">
           Carregando...
         </div>
       )}
       {error && (
-        <div className="text-center my-4 p-4 bg-red-100 text-red-700 rounded-md break-words">
+        <div className="text-center my-4 p-4 bg-red-100 dark:bg-red-800 text-red-700 dark:text-red-300 rounded-md break-words">
           Erro: {error}
         </div>
       )}
 
       {currentView}
 
-      <footer className="text-center mt-12 py-4 text-sm text-gray-800">
-        Feito com React e Tailwind CSS. Conectado ao Supabase.
+      <footer className="text-center mt-12 py-4 text-sm text-gray-800 dark:text-slate-400">
+        {/* Content removed as per user request */}
       </footer>
     </div>
   );
