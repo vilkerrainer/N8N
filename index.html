@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -18,12 +19,13 @@
 </script>
 <style>
   body {
-    color: #000000; /* Default text to black */
+    color: #334155; /* slate-700 for light mode default text */
   }
+  /* Tailwind will handle dark mode text color via dark:text-slate-200 etc. */
 </style>
 <link rel="stylesheet" href="/index.css">
 </head>
-<body class="bg-slate-100">
+<body class="bg-slate-100 dark:bg-slate-900">
   <div id="root"></div>
   <script type="module" src="/index.tsx"></script>
 </body>

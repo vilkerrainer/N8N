@@ -242,7 +242,7 @@ const App: React.FC = () => {
   };
 
   if (!isInitialized || isLoading && screen === 'role') { 
-    return <div className="min-h-screen flex items-center justify-center text-xl font-semibold text-black">Carregando dados...</div>;
+    return <div className="min-h-screen flex items-center justify-center text-xl font-semibold text-slate-800 dark:text-slate-200">Carregando dados...</div>;
   }
   
   let currentView;
@@ -288,7 +288,7 @@ const App: React.FC = () => {
       } else { 
          currentView = (
             <div className="text-center">
-                <p className="text-black text-xl mb-4">Nenhum personagem para exibir.</p>
+                <p className="text-slate-800 dark:text-slate-200 text-xl mb-4">Nenhum personagem para exibir.</p>
                 <Button onClick={handleNavigateToList}>
                     Voltar para Lista de Personagens
                 </Button>
@@ -302,10 +302,10 @@ const App: React.FC = () => {
 
 
   return (
-    <div className="min-h-screen bg-slate-200 py-8 px-4">
+    <div className="min-h-screen bg-slate-200 dark:bg-slate-900 py-8 px-4">
       <header className="text-center mb-10">
-        <h1 className="text-5xl font-bold text-sky-700 tracking-tight">Criador de Personagens D&amp;D 5e</h1>
-        <p className="text-gray-900 mt-2">Crie e gerencie seus heróis de aventura!</p>
+        <h1 className="text-5xl font-bold text-sky-700 dark:text-sky-400 tracking-tight">Criador de Personagens D&amp;D 5e</h1>
+        <p className="text-gray-900 dark:text-gray-300 mt-2">Crie e gerencie seus heróis de aventura!</p>
         {userRole && (
           <Button onClick={handleChangeRole} variant="secondary" className="mt-4">
             Mudar Papel (Mestre/Jogador)
@@ -314,19 +314,19 @@ const App: React.FC = () => {
       </header>
 
       {isLoading && screen !== 'role' && (
-        <div className="text-center my-4 p-4 bg-sky-100 text-sky-700 rounded-md">
+        <div className="text-center my-4 p-4 bg-sky-100 text-sky-700 dark:bg-sky-900 dark:text-sky-300 rounded-md">
           Carregando...
         </div>
       )}
       {error && (
-        <div className="text-center my-4 p-4 bg-red-100 text-red-700 rounded-md break-words">
+        <div className="text-center my-4 p-4 bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300 rounded-md break-words">
           Erro: {error}
         </div>
       )}
 
       {currentView}
 
-      <footer className="text-center mt-12 py-4 text-sm text-gray-800">
+      <footer className="text-center mt-12 py-4 text-sm text-gray-800 dark:text-gray-400">
         Feito com React e Tailwind CSS. Conectado ao Supabase.
       </footer>
     </div>

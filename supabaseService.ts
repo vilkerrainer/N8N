@@ -1,4 +1,4 @@
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient, RealtimeChannel } from '@supabase/supabase-js';
 import { Character } from './types';
 
 // IMPORTANT: These are the credentials you provided.
@@ -27,14 +27,13 @@ export const getCharacters = async (): Promise<Character[]> => {
 };
 
 export const saveCharacter = async (character: Character): Promise<Character | null> => {
-  // Ensure ID exists for upsert
   const characterWithId = { ...character, id: character.id || Date.now().toString() };
 
   const { data, error } = await supabase
     .from(TABLE_NAME)
     .upsert(characterWithId, { onConflict: 'id' })
     .select()
-    .single(); // Assuming upsert returns the affected row
+    .single(); 
 
   if (error) {
     console.error('Error saving character:', error.message, error);
@@ -71,20 +70,65 @@ export const updateCharacter = async (characterId: string, updates: Partial<Char
   return data;
 };
 
-// Helper to get a single character, useful for checking existence
 export const getCharacterById = async (characterId: string): Promise<Character | null> => {
   const { data, error } = await supabase
     .from(TABLE_NAME)
     .select('*')
     .eq('id', characterId)
-    .maybeSingle(); // Returns one row or null
+    .maybeSingle(); 
 
   if (error) {
     console.error('Error fetching character by ID:', error.message, error);
-    // Don't throw for "not found" type errors if maybeSingle is used
-    if (error.code !== 'PGRST116') { // PGRST116: "The result contains 0 rows"
+    if (error.code !== 'PGRST116') { 
          throw error;
     }
   }
   return data;
+};
+
+// Real-time subscription
+export const subscribeToCharacterUpdates = (
+  characterId: string,
+  callback: (updatedCharacter: Character) => void
+): RealtimeChannel => {
+  const channel = supabase
+    .channel(`character-${characterId}-updates`)
+    .on(
+      'postgres_changes',
+      {
+        event: 'UPDATE',
+        schema: 'public',
+        table: TABLE_NAME,
+        filter: `id=eq.${characterId}`,
+      },
+      (payload) => {
+        if (payload.new && typeof payload.new === 'object' && payload.new !== null) {
+            // Perform a more thorough check if payload.new is indeed a Character
+            const updatedChar = payload.new as Character;
+            if (updatedChar.id && updatedChar.name) { // Basic check for Character structure
+                 callback(updatedChar);
+            } else {
+                console.warn("Received incomplete character data from subscription:", payload.new);
+            }
+        } else {
+            console.warn("Received invalid payload from subscription:", payload);
+        }
+      }
+    )
+    .subscribe((status, err) => {
+        if (status === 'SUBSCRIBED') {
+            console.log(`Subscribed to updates for character ${characterId}`);
+        }
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+            console.error(`Subscription error for character ${characterId}:`, status, err);
+        }
+    });
+
+  return channel;
+};
+
+export const unsubscribeFromChannel = async (channel: RealtimeChannel) => {
+  await channel.unsubscribe();
+  await supabase.removeChannel(channel);
+  console.log(`Unsubscribed from channel: ${channel.topic}`);
 };
