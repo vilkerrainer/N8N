@@ -1,5 +1,4 @@
 
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { Character, AttributeName } from './types';
 import CharacterForm from './components/CharacterForm';
@@ -52,6 +51,9 @@ const initialCharacterData: Character = {
 };
 
 const LOCAL_STORAGE_ROLE_KEY = 'dndUserRole';
+const LOCAL_STORAGE_VIEWING_CHARACTER_ID_KEY = 'dndAppViewingCharacterId';
+const LOCAL_STORAGE_ACTIVE_SCREEN_KEY = 'dndAppActiveScreen';
+
 
 type Screen = 'role' | 'dm_list' | 'player_char_list' | 'player_sheet' | 'player_form';
 
@@ -65,11 +67,19 @@ const App: React.FC = () => {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
+  const clearViewingStateFromStorage = () => {
+    localStorage.removeItem(LOCAL_STORAGE_VIEWING_CHARACTER_ID_KEY);
+    localStorage.removeItem(LOCAL_STORAGE_ACTIVE_SCREEN_KEY);
+  };
+
   const loadData = useCallback(async () => {
     setIsLoading(true);
     setError(null);
     try {
       const savedRole = localStorage.getItem(LOCAL_STORAGE_ROLE_KEY);
+      const savedViewingCharId = localStorage.getItem(LOCAL_STORAGE_VIEWING_CHARACTER_ID_KEY);
+      const savedActiveScreen = localStorage.getItem(LOCAL_STORAGE_ACTIVE_SCREEN_KEY) as Screen | null;
+
       let fetchedCharacters = await supabaseService.getCharacters();
 
       const testCharExists = fetchedCharacters.some(c => c.id === TEST_CHARACTER_ID);
@@ -85,6 +95,21 @@ const App: React.FC = () => {
       
       setCharacters(fetchedCharacters);
 
+      if (savedRole === 'player' && savedActiveScreen === 'player_sheet' && savedViewingCharId) {
+        const charToView = fetchedCharacters.find(c => c.id === savedViewingCharId);
+        if (charToView) {
+          setUserRole('player');
+          setViewingCharacter(charToView);
+          setScreen('player_sheet');
+          setIsInitialized(true);
+          setIsLoading(false);
+          return; 
+        } else {
+          // Character not found, clear stale localStorage
+          clearViewingStateFromStorage();
+        }
+      }
+      
       if (savedRole) {
         setUserRole(savedRole);
         if (savedRole === 'dm') {
@@ -128,8 +153,11 @@ const App: React.FC = () => {
         if (userRole === 'player') {
           setViewingCharacter(savedCharacter); 
           setScreen('player_sheet');
+          localStorage.setItem(LOCAL_STORAGE_VIEWING_CHARACTER_ID_KEY, savedCharacter.id);
+          localStorage.setItem(LOCAL_STORAGE_ACTIVE_SCREEN_KEY, 'player_sheet');
         } else { 
           setScreen('dm_list');
+          clearViewingStateFromStorage(); // DM list isn't a "viewing" state
         }
       } else {
         throw new Error("Character data was not returned after save.");
@@ -149,6 +177,9 @@ const App: React.FC = () => {
         setCharacters(prevChars => prevChars.map(c => c.id === characterId ? updatedCharacter : c));
         if (viewingCharacter && viewingCharacter.id === characterId) {
           setViewingCharacter(updatedCharacter);
+          // If viewing state is updated, ensure localStorage is also up-to-date
+          localStorage.setItem(LOCAL_STORAGE_VIEWING_CHARACTER_ID_KEY, updatedCharacter.id);
+          localStorage.setItem(LOCAL_STORAGE_ACTIVE_SCREEN_KEY, 'player_sheet');
         }
       } else {
          console.warn("Character not found for update or no data returned:", characterId);
@@ -172,6 +203,7 @@ const App: React.FC = () => {
 
           if (viewingCharacter && viewingCharacter.id === characterIdToDelete) {
             setViewingCharacter(null);
+            clearViewingStateFromStorage();
             if (userRole === 'player') setScreen('player_char_list');
           }
           if (editingCharacter && editingCharacter.id === characterIdToDelete) {
@@ -204,21 +236,26 @@ const App: React.FC = () => {
   const handlePlayerViewCharacter = (character: Character) => {
     setViewingCharacter(character);
     setScreen('player_sheet');
+    localStorage.setItem(LOCAL_STORAGE_VIEWING_CHARACTER_ID_KEY, character.id);
+    localStorage.setItem(LOCAL_STORAGE_ACTIVE_SCREEN_KEY, 'player_sheet');
   };
 
   const handlePlayerEditCharacter = (character: Character) => {
     setEditingCharacter(character);
     setScreen('player_form');
+    clearViewingStateFromStorage();
   };
 
   const handlePlayerCreateCharacter = () => {
     setEditingCharacter(null); 
     setScreen('player_form');
+    clearViewingStateFromStorage();
   };
 
   const handleNavigateToList = () => {
     setViewingCharacter(null);
     setEditingCharacter(null);
+    clearViewingStateFromStorage();
     if (userRole === 'player') setScreen('player_char_list');
     else setScreen('dm_list');
   };
@@ -226,6 +263,7 @@ const App: React.FC = () => {
   const handleRoleSelect = (role: 'player' | 'dm') => {
     setUserRole(role);
     localStorage.setItem(LOCAL_STORAGE_ROLE_KEY, role);
+    clearViewingStateFromStorage();
     if (role === 'dm') {
       setScreen('dm_list');
     } else {
@@ -239,6 +277,7 @@ const App: React.FC = () => {
     setEditingCharacter(null);
     setScreen('role');
     localStorage.removeItem(LOCAL_STORAGE_ROLE_KEY);
+    clearViewingStateFromStorage();
   };
 
   if (!isInitialized || isLoading && screen === 'role') { 
@@ -286,9 +325,11 @@ const App: React.FC = () => {
             />
         );
       } else { 
+         // This case should ideally be handled by loadData redirecting if viewingCharacter is null
+         // but as a fallback:
          currentView = (
             <div className="text-center">
-                <p className="text-slate-800 dark:text-slate-200 text-xl mb-4">Nenhum personagem para exibir.</p>
+                <p className="text-slate-800 dark:text-slate-200 text-xl mb-4">Personagem não encontrado ou não selecionado.</p>
                 <Button onClick={handleNavigateToList}>
                     Voltar para Lista de Personagens
                 </Button>
