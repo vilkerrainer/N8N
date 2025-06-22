@@ -8,7 +8,13 @@ import {
   RANKS, Rank 
 } from '../types';
 import { ALL_SKILLS, SkillDefinition, calculateProficiencyBonus } from '../skills';
-import { RACES, CLASSES, BACKGROUNDS, ALIGNMENTS, FIGHTING_STYLE_OPTIONS, CLASS_SPELLCASTING_ABILITIES } from '../dndOptions';
+import { 
+    RACES, CLASSES, BACKGROUNDS, ALIGNMENTS, FIGHTING_STYLE_OPTIONS, 
+    CLASS_SPELLCASTING_ABILITIES, getHitDieTypeForClass,
+    getMaxRages, getMaxBardicInspirations, getMaxChannelDivinityUses,
+    getMaxRelentlessEnduranceUses, getMaxSecondWindUses, getMaxActionSurgeUses,
+    getMaxBreathWeaponUses, getMaxKiPoints, getMaxLayOnHandsPool
+} from '../dndOptions';
 import { ALL_AVAILABLE_SPELLS, getCantripsByClass, getSpellsByClassAndLevel } from '../spells'; 
 import { 
   getClassSpellSlots, 
@@ -65,10 +71,33 @@ const initialCharacterValues: Omit<Character, 'id' | 'magic' | 'classFeatures' |
     spellsKnownPrepared: [],
     spellbook: [], 
     spellSlots: Array(9).fill(0),
+    currentSpellSlots: Array(9).fill(0),
   },
   classFeatures: [],
   racialFeatures: [], 
   rank: RANKS[0],
+  maxHitDice: 1,
+  currentHitDice: 1,
+  hitDieType: getHitDieTypeForClass(CLASSES[0]),
+  // Limited use abilities initialized based on L1 defaults
+  maxRages: getMaxRages(1),
+  currentRages: getMaxRages(1),
+  maxBardicInspirations: getMaxBardicInspirations(10), // Assuming default CHA 10 for initial calc
+  currentBardicInspirations: getMaxBardicInspirations(10),
+  maxChannelDivinityUses: getMaxChannelDivinityUses(CLASSES[0], 1),
+  currentChannelDivinityUses: getMaxChannelDivinityUses(CLASSES[0], 1),
+  maxSecondWindUses: getMaxSecondWindUses(CLASSES[0]),
+  currentSecondWindUses: getMaxSecondWindUses(CLASSES[0]),
+  maxActionSurgeUses: getMaxActionSurgeUses(CLASSES[0], 1),
+  currentActionSurgeUses: getMaxActionSurgeUses(CLASSES[0], 1),
+  maxKiPoints: getMaxKiPoints(CLASSES[0], 1),
+  currentKiPoints: getMaxKiPoints(CLASSES[0], 1),
+  maxLayOnHandsPool: getMaxLayOnHandsPool(CLASSES[0], 1),
+  currentLayOnHandsPool: getMaxLayOnHandsPool(CLASSES[0], 1),
+  maxRelentlessEnduranceUses: getMaxRelentlessEnduranceUses(RACES[0]),
+  currentRelentlessEnduranceUses: getMaxRelentlessEnduranceUses(RACES[0]),
+  maxBreathWeaponUses: getMaxBreathWeaponUses(RACES[0]),
+  currentBreathWeaponUses: getMaxBreathWeaponUses(RACES[0]),
 };
 
 
@@ -80,7 +109,10 @@ const CharacterForm: React.FC<CharacterFormProps> = ({ onSave, initialData }) =>
           ...initialData, 
           classFeatures: initialData.classFeatures || [], 
           racialFeatures: initialData.racialFeatures || [], 
-          rank: initialData.rank || initialCharacterValues.rank 
+          rank: initialData.rank || initialCharacterValues.rank,
+          maxHitDice: initialData.maxHitDice || initialData.level || 1,
+          currentHitDice: initialData.currentHitDice !== undefined ? initialData.currentHitDice : (initialData.level || 1),
+          hitDieType: initialData.hitDieType || getHitDieTypeForClass(initialData.charClass || CLASSES[0]),
         } 
       : { 
           ...initialCharacterValues, 
@@ -88,15 +120,21 @@ const CharacterForm: React.FC<CharacterFormProps> = ({ onSave, initialData }) =>
           proficientSkills: initialData?.proficientSkills || [], 
           classFeatures: [], 
           racialFeatures: [], 
-          rank: initialCharacterValues.rank 
+          rank: initialCharacterValues.rank,
+          maxHitDice: initialCharacterValues.level,
+          currentHitDice: initialCharacterValues.level,
+          hitDieType: getHitDieTypeForClass(initialCharacterValues.charClass),
         };
     
+    // Initialize magic with currentSpellSlots
+    const initialSpellSlots = getClassSpellSlots(baseData.charClass, baseData.level);
     baseData.magic = {
       ...(initialCharacterValues.magic), 
       ...(baseData.magic || {}), 
-      spellSlots: baseData.magic?.spellSlots && baseData.magic.spellSlots.length === 9 
-                    ? baseData.magic.spellSlots 
-                    : Array(9).fill(0), 
+      spellSlots: initialSpellSlots,
+      currentSpellSlots: baseData.magic?.currentSpellSlots && baseData.magic.currentSpellSlots.length === 9 
+                         ? baseData.magic.currentSpellSlots
+                         : [...initialSpellSlots], // Initialize current to max
       cantripsKnown: baseData.magic?.cantripsKnown || [],
       spellsKnownPrepared: baseData.magic?.spellsKnownPrepared || [],
       spellbook: baseData.magic?.spellbook || [],
@@ -104,16 +142,32 @@ const CharacterForm: React.FC<CharacterFormProps> = ({ onSave, initialData }) =>
     
     const initialPrimaryAbility = CLASS_SPELLCASTING_ABILITIES[baseData.charClass] || undefined;
     baseData.magic.spellcastingAbilityName = baseData.magic.spellcastingAbilityName || initialPrimaryAbility;
-    
-    if (baseData.charClass && baseData.level) {
-        baseData.magic.spellSlots = getClassSpellSlots(baseData.charClass, baseData.level);
-    }
-    
+        
     const fightingStyleExists = FIGHTING_STYLE_OPTIONS.some(fso => fso.name === baseData.fightingStyle);
     if (!baseData.fightingStyle || !fightingStyleExists) {
         baseData.fightingStyle = FIGHTING_STYLE_OPTIONS.find(fso => fso.name === "")?.name || FIGHTING_STYLE_OPTIONS[0].name;
     }
-    
+
+    // Initialize limited use abilities
+    baseData.maxRages = initialData?.maxRages ?? getMaxRages(baseData.level);
+    baseData.currentRages = initialData?.currentRages ?? baseData.maxRages;
+    baseData.maxBardicInspirations = initialData?.maxBardicInspirations ?? getMaxBardicInspirations(baseData.attributes.charisma);
+    baseData.currentBardicInspirations = initialData?.currentBardicInspirations ?? baseData.maxBardicInspirations;
+    baseData.maxChannelDivinityUses = initialData?.maxChannelDivinityUses ?? getMaxChannelDivinityUses(baseData.charClass, baseData.level);
+    baseData.currentChannelDivinityUses = initialData?.currentChannelDivinityUses ?? baseData.maxChannelDivinityUses;
+    baseData.maxSecondWindUses = initialData?.maxSecondWindUses ?? getMaxSecondWindUses(baseData.charClass);
+    baseData.currentSecondWindUses = initialData?.currentSecondWindUses ?? baseData.maxSecondWindUses;
+    baseData.maxActionSurgeUses = initialData?.maxActionSurgeUses ?? getMaxActionSurgeUses(baseData.charClass, baseData.level);
+    baseData.currentActionSurgeUses = initialData?.currentActionSurgeUses ?? baseData.maxActionSurgeUses;
+    baseData.maxKiPoints = initialData?.maxKiPoints ?? getMaxKiPoints(baseData.charClass, baseData.level);
+    baseData.currentKiPoints = initialData?.currentKiPoints ?? baseData.maxKiPoints;
+    baseData.maxLayOnHandsPool = initialData?.maxLayOnHandsPool ?? getMaxLayOnHandsPool(baseData.charClass, baseData.level);
+    baseData.currentLayOnHandsPool = initialData?.currentLayOnHandsPool ?? baseData.maxLayOnHandsPool;
+    baseData.maxRelentlessEnduranceUses = initialData?.maxRelentlessEnduranceUses ?? getMaxRelentlessEnduranceUses(baseData.race);
+    baseData.currentRelentlessEnduranceUses = initialData?.currentRelentlessEnduranceUses ?? baseData.maxRelentlessEnduranceUses;
+    baseData.maxBreathWeaponUses = initialData?.maxBreathWeaponUses ?? getMaxBreathWeaponUses(baseData.race);
+    baseData.currentBreathWeaponUses = initialData?.currentBreathWeaponUses ?? baseData.maxBreathWeaponUses;
+
     return baseData;
   });
 
@@ -149,7 +203,10 @@ const CharacterForm: React.FC<CharacterFormProps> = ({ onSave, initialData }) =>
           ...initialData, 
           classFeatures: initialData.classFeatures || [], 
           racialFeatures: initialData.racialFeatures || [], 
-          rank: initialData.rank || initialCharacterValues.rank 
+          rank: initialData.rank || initialCharacterValues.rank,
+          maxHitDice: initialData.maxHitDice || initialData.level || 1,
+          currentHitDice: initialData.currentHitDice !== undefined ? initialData.currentHitDice : (initialData.level || 1),
+          hitDieType: initialData.hitDieType || getHitDieTypeForClass(initialData.charClass || CLASSES[0]),
         }
       : { 
           ...initialCharacterValues, 
@@ -157,15 +214,20 @@ const CharacterForm: React.FC<CharacterFormProps> = ({ onSave, initialData }) =>
           proficientSkills: initialData?.proficientSkills || [], 
           classFeatures: initialCharacterValues.classFeatures, 
           racialFeatures: initialCharacterValues.racialFeatures, 
-          rank: initialCharacterValues.rank 
+          rank: initialCharacterValues.rank,
+          maxHitDice: initialCharacterValues.level,
+          currentHitDice: initialCharacterValues.level,
+          hitDieType: getHitDieTypeForClass(initialCharacterValues.charClass),
         };
 
+    const initialSpellSlots = getClassSpellSlots(baseData.charClass, baseData.level);
     baseData.magic = {
       ...(initialCharacterValues.magic),
       ...(baseData.magic || {}),
-      spellSlots: baseData.magic?.spellSlots && baseData.magic.spellSlots.length === 9 
-                    ? baseData.magic.spellSlots 
-                    : Array(9).fill(0),
+      spellSlots: initialSpellSlots,
+      currentSpellSlots: baseData.magic?.currentSpellSlots && baseData.magic.currentSpellSlots.length === 9 
+                         ? baseData.magic.currentSpellSlots 
+                         : [...initialSpellSlots],
       cantripsKnown: baseData.magic?.cantripsKnown || [],
       spellsKnownPrepared: baseData.magic?.spellsKnownPrepared || [],
       spellbook: baseData.magic?.spellbook || [],
@@ -173,15 +235,31 @@ const CharacterForm: React.FC<CharacterFormProps> = ({ onSave, initialData }) =>
     
     const initialPrimaryAbility = CLASS_SPELLCASTING_ABILITIES[baseData.charClass] || undefined;
     baseData.magic.spellcastingAbilityName = baseData.magic.spellcastingAbilityName || initialPrimaryAbility;
-
-    if (baseData.charClass && baseData.level) {
-        baseData.magic.spellSlots = getClassSpellSlots(baseData.charClass, baseData.level);
-    }
     
     const fightingStyleExists = FIGHTING_STYLE_OPTIONS.some(fso => fso.name === baseData.fightingStyle);
     if (!baseData.fightingStyle || !fightingStyleExists) {
         baseData.fightingStyle = FIGHTING_STYLE_OPTIONS.find(fso => fso.name === "")?.name || FIGHTING_STYLE_OPTIONS[0].name;
     }
+
+    baseData.maxRages = initialData?.maxRages ?? getMaxRages(baseData.level);
+    baseData.currentRages = initialData?.currentRages ?? baseData.maxRages;
+    baseData.maxBardicInspirations = initialData?.maxBardicInspirations ?? getMaxBardicInspirations(baseData.attributes.charisma);
+    baseData.currentBardicInspirations = initialData?.currentBardicInspirations ?? baseData.maxBardicInspirations;
+    baseData.maxChannelDivinityUses = initialData?.maxChannelDivinityUses ?? getMaxChannelDivinityUses(baseData.charClass, baseData.level);
+    baseData.currentChannelDivinityUses = initialData?.currentChannelDivinityUses ?? baseData.maxChannelDivinityUses;
+    baseData.maxSecondWindUses = initialData?.maxSecondWindUses ?? getMaxSecondWindUses(baseData.charClass);
+    baseData.currentSecondWindUses = initialData?.currentSecondWindUses ?? baseData.maxSecondWindUses;
+    baseData.maxActionSurgeUses = initialData?.maxActionSurgeUses ?? getMaxActionSurgeUses(baseData.charClass, baseData.level);
+    baseData.currentActionSurgeUses = initialData?.currentActionSurgeUses ?? baseData.maxActionSurgeUses;
+    baseData.maxKiPoints = initialData?.maxKiPoints ?? getMaxKiPoints(baseData.charClass, baseData.level);
+    baseData.currentKiPoints = initialData?.currentKiPoints ?? baseData.maxKiPoints;
+    baseData.maxLayOnHandsPool = initialData?.maxLayOnHandsPool ?? getMaxLayOnHandsPool(baseData.charClass, baseData.level);
+    baseData.currentLayOnHandsPool = initialData?.currentLayOnHandsPool ?? baseData.maxLayOnHandsPool;
+    baseData.maxRelentlessEnduranceUses = initialData?.maxRelentlessEnduranceUses ?? getMaxRelentlessEnduranceUses(baseData.race);
+    baseData.currentRelentlessEnduranceUses = initialData?.currentRelentlessEnduranceUses ?? baseData.maxRelentlessEnduranceUses;
+    baseData.maxBreathWeaponUses = initialData?.maxBreathWeaponUses ?? getMaxBreathWeaponUses(baseData.race);
+    baseData.currentBreathWeaponUses = initialData?.currentBreathWeaponUses ?? baseData.maxBreathWeaponUses;
+
 
     setFormData(baseData);
   }, [initialData]);
@@ -210,6 +288,8 @@ const CharacterForm: React.FC<CharacterFormProps> = ({ onSave, initialData }) =>
   useEffect(() => {
     const className = formData.charClass;
     const level = formData.level;
+    const attributes = formData.attributes;
+    const race = formData.race;
 
     setExpandedSpellName(null); 
 
@@ -255,6 +335,7 @@ const CharacterForm: React.FC<CharacterFormProps> = ({ onSave, initialData }) =>
       const currentClass = prev.charClass;
       const currentRace = prev.race;
       const currentLevel = prev.level;
+      const currentAttributes = prev.attributes;
       let updatedClassFeatures = [...(prev.classFeatures || [])];
       let updatedRacialFeatures = [...(prev.racialFeatures || [])];
       let fightingStyleFromFeature: string | undefined = undefined;
@@ -277,9 +358,9 @@ const CharacterForm: React.FC<CharacterFormProps> = ({ onSave, initialData }) =>
           } else { 
              updatedClassFeatures[existingFeatureIndex] = {
                  ...updatedClassFeatures[existingFeatureIndex],
-                 featureName: featureDef.name, // Ensure name updates if definition changes
-                 description: featureDef.description, // Ensure description updates
-                 levelAcquired: featureDef.level, // Ensure level updates
+                 featureName: featureDef.name, 
+                 description: featureDef.description, 
+                 levelAcquired: featureDef.level, 
              };
           }
            if (featureDef.id.includes('fighting_style') && updatedClassFeatures[existingFeatureIndex]?.choiceValue) {
@@ -287,7 +368,6 @@ const CharacterForm: React.FC<CharacterFormProps> = ({ onSave, initialData }) =>
            }
         }
       });
-      // Filter out features that are no longer applicable due to level change or class change
       updatedClassFeatures = updatedClassFeatures.filter(cf => {
         const featureDef = featuresForClass.find(fdef => fdef.id === cf.featureId);
         return featureDef ? featureDef.level <= currentLevel : false; 
@@ -306,10 +386,8 @@ const CharacterForm: React.FC<CharacterFormProps> = ({ onSave, initialData }) =>
                   description: racialDef.description,
               });
           } else if (racialDef.type === 'choice' && existingSelection) {
-              // Preserve existing choice if feature definition still exists
               newRacialFeatures.push(existingSelection);
           }
-          // If it's a choice feature not yet selected, it will be handled by UI
       });
       updatedRacialFeatures = newRacialFeatures;
       
@@ -323,7 +401,13 @@ const CharacterForm: React.FC<CharacterFormProps> = ({ onSave, initialData }) =>
            }
       }
         
-      updatedMagic.spellSlots = getClassSpellSlots(currentClass, currentLevel);
+      const newMaxSpellSlots = getClassSpellSlots(currentClass, currentLevel);
+      updatedMagic.spellSlots = newMaxSpellSlots;
+      // Reset current spell slots to new max if max spell slots changed (e.g. level up)
+      if(JSON.stringify(prev.magic?.spellSlots) !== JSON.stringify(newMaxSpellSlots)) {
+        updatedMagic.currentSpellSlots = [...newMaxSpellSlots];
+      }
+
 
       const validCantripNames = getCantripsByClass(currentClass).map(s => s.name);
       updatedMagic.cantripsKnown = (updatedMagic.cantripsKnown || []).filter(spellName => 
@@ -374,17 +458,116 @@ const CharacterForm: React.FC<CharacterFormProps> = ({ onSave, initialData }) =>
         finalFightingStyle = fightingStyleFromFeature;
       }
 
+      // Hit Dice Update Logic
+      const newMaxHitDice = currentLevel > 0 ? currentLevel : 1;
+      const newHitDieType = getHitDieTypeForClass(currentClass);
+      let newCurrentHitDice = prev.currentHitDice;
+
+      if (prev.maxHitDice !== newMaxHitDice || prev.hitDieType !== newHitDieType || 
+          (initialData === null && prev.level !== currentLevel) ) { 
+        newCurrentHitDice = newMaxHitDice;
+      }
+      newCurrentHitDice = Math.min(newCurrentHitDice, newMaxHitDice);
+
+      // Limited Use Abilities Update Logic
+      const newMaxRages = getMaxRages(currentLevel);
+      const newMaxBardicInspirations = getMaxBardicInspirations(currentAttributes.charisma);
+      const newMaxChannelDivinityUses = getMaxChannelDivinityUses(currentClass, currentLevel);
+      const newMaxSecondWindUses = getMaxSecondWindUses(currentClass);
+      const newMaxActionSurgeUses = getMaxActionSurgeUses(currentClass, currentLevel);
+      const newMaxKiPoints = getMaxKiPoints(currentClass, currentLevel);
+      const newMaxLayOnHandsPool = getMaxLayOnHandsPool(currentClass, currentLevel);
+      const newMaxRelentlessEnduranceUses = getMaxRelentlessEnduranceUses(currentRace);
+      const newMaxBreathWeaponUses = getMaxBreathWeaponUses(currentRace);
+
+
+      let newCurrentRages = prev.currentRages;
+      if(prev.maxRages !== newMaxRages) newCurrentRages = newMaxRages;
+      newCurrentRages = Math.min(newCurrentRages ?? newMaxRages, newMaxRages);
+      
+      let newCurrentBardicInspirations = prev.currentBardicInspirations;
+      if(prev.maxBardicInspirations !== newMaxBardicInspirations) newCurrentBardicInspirations = newMaxBardicInspirations;
+      newCurrentBardicInspirations = Math.min(newCurrentBardicInspirations ?? newMaxBardicInspirations, newMaxBardicInspirations);
+
+      let newCurrentChannelDivinityUses = prev.currentChannelDivinityUses;
+      if(prev.maxChannelDivinityUses !== newMaxChannelDivinityUses) newCurrentChannelDivinityUses = newMaxChannelDivinityUses;
+      newCurrentChannelDivinityUses = Math.min(newCurrentChannelDivinityUses ?? newMaxChannelDivinityUses, newMaxChannelDivinityUses);
+
+      let newCurrentSecondWindUses = prev.currentSecondWindUses;
+      if(prev.maxSecondWindUses !== newMaxSecondWindUses) newCurrentSecondWindUses = newMaxSecondWindUses;
+      newCurrentSecondWindUses = Math.min(newCurrentSecondWindUses ?? newMaxSecondWindUses, newMaxSecondWindUses);
+
+      let newCurrentActionSurgeUses = prev.currentActionSurgeUses;
+      if(prev.maxActionSurgeUses !== newMaxActionSurgeUses) newCurrentActionSurgeUses = newMaxActionSurgeUses;
+      newCurrentActionSurgeUses = Math.min(newCurrentActionSurgeUses ?? newMaxActionSurgeUses, newMaxActionSurgeUses);
+      
+      let newCurrentKiPoints = prev.currentKiPoints;
+      if(prev.maxKiPoints !== newMaxKiPoints) newCurrentKiPoints = newMaxKiPoints;
+      newCurrentKiPoints = Math.min(newCurrentKiPoints ?? newMaxKiPoints, newMaxKiPoints);
+
+      let newCurrentLayOnHandsPool = prev.currentLayOnHandsPool;
+      if(prev.maxLayOnHandsPool !== newMaxLayOnHandsPool) newCurrentLayOnHandsPool = newMaxLayOnHandsPool;
+      newCurrentLayOnHandsPool = Math.min(newCurrentLayOnHandsPool ?? newMaxLayOnHandsPool, newMaxLayOnHandsPool);
+
+      let newCurrentRelentlessEnduranceUses = prev.currentRelentlessEnduranceUses;
+      if(prev.maxRelentlessEnduranceUses !== newMaxRelentlessEnduranceUses) newCurrentRelentlessEnduranceUses = newMaxRelentlessEnduranceUses;
+      newCurrentRelentlessEnduranceUses = Math.min(newCurrentRelentlessEnduranceUses ?? newMaxRelentlessEnduranceUses, newMaxRelentlessEnduranceUses);
+
+      let newCurrentBreathWeaponUses = prev.currentBreathWeaponUses;
+      if(prev.maxBreathWeaponUses !== newMaxBreathWeaponUses) newCurrentBreathWeaponUses = newMaxBreathWeaponUses;
+      newCurrentBreathWeaponUses = Math.min(newCurrentBreathWeaponUses ?? newMaxBreathWeaponUses, newMaxBreathWeaponUses);
+
+
       if (JSON.stringify(prev.magic) !== JSON.stringify(updatedMagic) || 
           JSON.stringify(prev.classFeatures) !== JSON.stringify(updatedClassFeatures) ||
           JSON.stringify(prev.racialFeatures) !== JSON.stringify(updatedRacialFeatures) ||
-          prev.fightingStyle !== finalFightingStyle
+          prev.fightingStyle !== finalFightingStyle ||
+          prev.maxHitDice !== newMaxHitDice ||
+          prev.currentHitDice !== newCurrentHitDice ||
+          prev.hitDieType !== newHitDieType ||
+          prev.maxRages !== newMaxRages || prev.currentRages !== newCurrentRages ||
+          prev.maxBardicInspirations !== newMaxBardicInspirations || prev.currentBardicInspirations !== newCurrentBardicInspirations ||
+          prev.maxChannelDivinityUses !== newMaxChannelDivinityUses || prev.currentChannelDivinityUses !== newCurrentChannelDivinityUses ||
+          prev.maxSecondWindUses !== newMaxSecondWindUses || prev.currentSecondWindUses !== newCurrentSecondWindUses ||
+          prev.maxActionSurgeUses !== newMaxActionSurgeUses || prev.currentActionSurgeUses !== newCurrentActionSurgeUses ||
+          prev.maxKiPoints !== newMaxKiPoints || prev.currentKiPoints !== newCurrentKiPoints ||
+          prev.maxLayOnHandsPool !== newMaxLayOnHandsPool || prev.currentLayOnHandsPool !== newCurrentLayOnHandsPool ||
+          prev.maxRelentlessEnduranceUses !== newMaxRelentlessEnduranceUses || prev.currentRelentlessEnduranceUses !== newCurrentRelentlessEnduranceUses ||
+          prev.maxBreathWeaponUses !== newMaxBreathWeaponUses || prev.currentBreathWeaponUses !== newCurrentBreathWeaponUses
           ) {
-        return { ...prev, magic: updatedMagic, classFeatures: updatedClassFeatures, racialFeatures: updatedRacialFeatures, fightingStyle: finalFightingStyle };
+        return { 
+            ...prev, 
+            magic: updatedMagic, 
+            classFeatures: updatedClassFeatures, 
+            racialFeatures: updatedRacialFeatures, 
+            fightingStyle: finalFightingStyle,
+            maxHitDice: newMaxHitDice,
+            currentHitDice: newCurrentHitDice,
+            hitDieType: newHitDieType,
+            maxRages: newMaxRages,
+            currentRages: newCurrentRages,
+            maxBardicInspirations: newMaxBardicInspirations,
+            currentBardicInspirations: newCurrentBardicInspirations,
+            maxChannelDivinityUses: newMaxChannelDivinityUses,
+            currentChannelDivinityUses: newCurrentChannelDivinityUses,
+            maxSecondWindUses: newMaxSecondWindUses,
+            currentSecondWindUses: newCurrentSecondWindUses,
+            maxActionSurgeUses: newMaxActionSurgeUses,
+            currentActionSurgeUses: newCurrentActionSurgeUses,
+            maxKiPoints: newMaxKiPoints,
+            currentKiPoints: newCurrentKiPoints,
+            maxLayOnHandsPool: newMaxLayOnHandsPool,
+            currentLayOnHandsPool: newCurrentLayOnHandsPool,
+            maxRelentlessEnduranceUses: newMaxRelentlessEnduranceUses,
+            currentRelentlessEnduranceUses: newCurrentRelentlessEnduranceUses,
+            maxBreathWeaponUses: newMaxBreathWeaponUses,
+            currentBreathWeaponUses: newCurrentBreathWeaponUses,
+        };
       }
       return prev; 
     });
 
-  }, [formData.charClass, formData.level, formData.race, initialData?.charClass, initialData?.level, initialData?.race]);
+  }, [formData.charClass, formData.level, formData.race, formData.attributes.charisma, initialData]);
 
 
   useEffect(() => {
@@ -432,24 +615,34 @@ const CharacterForm: React.FC<CharacterFormProps> = ({ onSave, initialData }) =>
     
     if (name.startsWith('attributes.')) {
       const attributeName = name.split('.')[1] as AttributeName;
-      setFormData(prev => ({
-        ...prev,
-        attributes: {
-          ...prev.attributes,
-          [attributeName]: type === 'number' ? parseInt(value) || 0 : value,
+      let newCharisma = formData.attributes.charisma;
+      if(attributeName === 'charisma') newCharisma = parseInt(value) || 0;
+
+      setFormData(prev => {
+        const updatedAttributes = {
+            ...prev.attributes,
+            [attributeName]: type === 'number' ? parseInt(value) || 0 : value,
+        };
+        const newMaxBardic = getMaxBardicInspirations(updatedAttributes.charisma);
+        return {
+            ...prev,
+            attributes: updatedAttributes,
+            maxBardicInspirations: newMaxBardic,
+            currentBardicInspirations: Math.min(prev.currentBardicInspirations ?? newMaxBardic, newMaxBardic)
         }
-      }));
+      });
     } else if (name.startsWith('magic.')) {
       const magicField = name.split('.')[1];
-      if (magicField === 'spellSlots') {
+      if (magicField === 'spellSlots' || magicField === 'currentSpellSlots') { // Also handle currentSpellSlots if edited directly
         const slotIndex = parseInt(name.split('.')[2]);
-        const newSpellSlots = [...(formData.magic?.spellSlots || Array(9).fill(0))];
-        newSpellSlots[slotIndex] = parseInt(value) || 0;
+        const slotArrayName = magicField as 'spellSlots' | 'currentSpellSlots';
+        const newSpellSlotsArray = [...(formData.magic?.[slotArrayName] || Array(9).fill(0))];
+        newSpellSlotsArray[slotIndex] = parseInt(value) || 0;
         setFormData(prev => ({
           ...prev,
           magic: {
             ...(prev.magic || initialCharacterValues.magic),
-            spellSlots: newSpellSlots,
+            [slotArrayName]: newSpellSlotsArray,
           }
         }));
       } else if (magicField === 'spellcastingAbilityName') {
@@ -502,7 +695,7 @@ const CharacterForm: React.FC<CharacterFormProps> = ({ onSave, initialData }) =>
         type: featureDef.type,
         choiceValue: choiceValue,
         choiceLabel: choiceDef?.label || choiceValue,
-        description: choiceDef?.description || featureDef.description, // Prioritize choice description
+        description: choiceDef?.description || featureDef.description, 
       };
       
       if (featureDef.id.includes('fighting_style')) {
@@ -539,7 +732,7 @@ const CharacterForm: React.FC<CharacterFormProps> = ({ onSave, initialData }) =>
             type: featureDef.type,
             choiceValue: choiceValue,
             choiceLabel: choiceDef?.label || choiceValue,
-            description: choiceDef?.description || featureDef.description, // Prioritize choice description
+            description: choiceDef?.description || featureDef.description, 
         };
 
         if (existingFeatureIndex !== -1) {
@@ -592,19 +785,16 @@ const CharacterForm: React.FC<CharacterFormProps> = ({ onSave, initialData }) =>
         let limit = Infinity;
         if (fieldName === 'cantripsKnown') {
             limit = numCantripsAllowed;
-            // Account for High Elf cantrip if present, it doesn't count against class limit
-            // if (highElfCantripSelection?.choiceValue) limit++; // This logic is tricky, already handled by disabling checkbox
         } else if (fieldName === 'spellbook' && prev.charClass === 'Mago') {
             limit = numInitialWizardSpellbookSpells; 
         } else if (fieldName === 'spellsKnownPrepared' && ['Patrulheiro', 'Feiticeiro', 'Bardo', 'Bruxo'].includes(prev.charClass)) {
             limit = numSpellsKnownAllowed;
         }
         
-        // Check if adding the spell would exceed the limit
         const addingNewSpell = !currentArray.includes(spellName);
         let currentCountForLimit = currentArray.length;
         if (fieldName === 'cantripsKnown' && highElfCantripSelection?.choiceValue && currentArray.includes(highElfCantripSelection.choiceValue)) {
-            currentCountForLimit--; // Don't count racial cantrip against class limit for addition checks
+            currentCountForLimit--; 
         }
 
         if (addingNewSpell && currentCountForLimit >= limit && limit !== Infinity) {
@@ -644,10 +834,32 @@ const CharacterForm: React.FC<CharacterFormProps> = ({ onSave, initialData }) =>
                 ? formData.magic.spellbook 
                 : ((formData.magic?.spellbook as unknown as string)?.split(',').map(s=>s.trim()).filter(s=>s) || []),
             spellSlots: formData.magic?.spellSlots && formData.magic.spellSlots.length === 9 ? formData.magic.spellSlots : Array(9).fill(0),
+            currentSpellSlots: formData.magic?.currentSpellSlots && formData.magic.currentSpellSlots.length === 9 ? formData.magic.currentSpellSlots : [...(formData.magic?.spellSlots || Array(9).fill(0))],
         },
         classFeatures: formData.classFeatures || [],
         racialFeatures: formData.racialFeatures || [],
         rank: formData.rank || RANKS[0],
+        maxHitDice: formData.level > 0 ? formData.level : 1,
+        currentHitDice: formData.currentHitDice > (formData.level > 0 ? formData.level : 1) ? (formData.level > 0 ? formData.level : 1) : formData.currentHitDice,
+        hitDieType: formData.hitDieType || getHitDieTypeForClass(formData.charClass),
+        maxRages: formData.maxRages ?? getMaxRages(formData.level),
+        currentRages: formData.currentRages ?? (formData.maxRages ?? getMaxRages(formData.level)),
+        maxBardicInspirations: formData.maxBardicInspirations ?? getMaxBardicInspirations(formData.attributes.charisma),
+        currentBardicInspirations: formData.currentBardicInspirations ?? (formData.maxBardicInspirations ?? getMaxBardicInspirations(formData.attributes.charisma)),
+        maxChannelDivinityUses: formData.maxChannelDivinityUses ?? getMaxChannelDivinityUses(formData.charClass, formData.level),
+        currentChannelDivinityUses: formData.currentChannelDivinityUses ?? (formData.maxChannelDivinityUses ?? getMaxChannelDivinityUses(formData.charClass, formData.level)),
+        maxSecondWindUses: formData.maxSecondWindUses ?? getMaxSecondWindUses(formData.charClass),
+        currentSecondWindUses: formData.currentSecondWindUses ?? (formData.maxSecondWindUses ?? getMaxSecondWindUses(formData.charClass)),
+        maxActionSurgeUses: formData.maxActionSurgeUses ?? getMaxActionSurgeUses(formData.charClass, formData.level),
+        currentActionSurgeUses: formData.currentActionSurgeUses ?? (formData.maxActionSurgeUses ?? getMaxActionSurgeUses(formData.charClass, formData.level)),
+        maxKiPoints: formData.maxKiPoints ?? getMaxKiPoints(formData.charClass, formData.level),
+        currentKiPoints: formData.currentKiPoints ?? (formData.maxKiPoints ?? getMaxKiPoints(formData.charClass, formData.level)),
+        maxLayOnHandsPool: formData.maxLayOnHandsPool ?? getMaxLayOnHandsPool(formData.charClass, formData.level),
+        currentLayOnHandsPool: formData.currentLayOnHandsPool ?? (formData.maxLayOnHandsPool ?? getMaxLayOnHandsPool(formData.charClass, formData.level)),
+        maxRelentlessEnduranceUses: formData.maxRelentlessEnduranceUses ?? getMaxRelentlessEnduranceUses(formData.race),
+        currentRelentlessEnduranceUses: formData.currentRelentlessEnduranceUses ?? (formData.maxRelentlessEnduranceUses ?? getMaxRelentlessEnduranceUses(formData.race)),
+        maxBreathWeaponUses: formData.maxBreathWeaponUses ?? getMaxBreathWeaponUses(formData.race),
+        currentBreathWeaponUses: formData.currentBreathWeaponUses ?? (formData.maxBreathWeaponUses ?? getMaxBreathWeaponUses(formData.race)),
     };
     onSave(characterToSave);
   };
@@ -719,8 +931,6 @@ const CharacterForm: React.FC<CharacterFormProps> = ({ onSave, initialData }) =>
     let countForLimit = currentSelected?.length || 0;
 
     if (listType === 'cantripsKnown' && highElfCantripSelection?.choiceValue && currentSelected?.includes(highElfCantripSelection.choiceValue)) {
-      // If the High Elf cantrip is selected and is part of the current list,
-      // it doesn't count towards the class-based limit for the purpose of disabling other checkboxes.
       countForLimit--;
     }
     
@@ -1120,17 +1330,27 @@ const CharacterForm: React.FC<CharacterFormProps> = ({ onSave, initialData }) =>
             )}
             
             <div>
-              <h4 className="text-md font-semibold text-slate-800 dark:text-slate-100 my-3">Espaços de Magia por Nível (Automático):</h4>
+              <h4 className="text-md font-semibold text-slate-800 dark:text-slate-100 my-3">Espaços de Magia por Nível (Manual/Automático):</h4>
               <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
                 {Array.from({ length: 9 }).map((_, i) => (
                   <div key={`spellSlotDisplay${i+1}`} className="mb-2">
-                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Nível {i+1}</label>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Máx. Nível {i+1}</label>
                     <input 
                         type="number"
                         name={`magic.spellSlots.${i}`} 
                         value={formData.magic?.spellSlots?.[i] !== undefined ? formData.magic.spellSlots[i] : 0}
                         onChange={handleChange} 
                         min="0"
+                        className="mt-1 block w-full px-3 py-2 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm sm:text-sm text-slate-900 dark:text-slate-100"
+                    />
+                     <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1 mt-1">Atuais Nível {i+1}</label>
+                     <input 
+                        type="number"
+                        name={`magic.currentSpellSlots.${i}`} 
+                        value={formData.magic?.currentSpellSlots?.[i] !== undefined ? formData.magic.currentSpellSlots[i] : 0}
+                        onChange={handleChange} 
+                        min="0"
+                        max={formData.magic?.spellSlots?.[i] !== undefined ? formData.magic.spellSlots[i] : 0}
                         className="mt-1 block w-full px-3 py-2 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm sm:text-sm text-slate-900 dark:text-slate-100"
                     />
                   </div>

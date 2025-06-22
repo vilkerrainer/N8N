@@ -31,6 +31,33 @@ export interface Character {
   classFeatures?: ClassFeatureSelection[]; 
   racialFeatures?: RacialFeatureSelection[]; 
   rank?: Rank; 
+
+  // Hit Dice
+  maxHitDice: number;
+  currentHitDice: number;
+  hitDieType: number; 
+
+  // Limited Use Abilities - Class
+  currentRages?: number;
+  maxRages?: number;
+  currentBardicInspirations?: number;
+  maxBardicInspirations?: number;
+  currentChannelDivinityUses?: number;
+  maxChannelDivinityUses?: number;
+  currentSecondWindUses?: number;
+  maxSecondWindUses?: number;
+  currentActionSurgeUses?: number;
+  maxActionSurgeUses?: number;
+  currentKiPoints?: number;
+  maxKiPoints?: number;
+  currentLayOnHandsPool?: number;
+  maxLayOnHandsPool?: number;
+
+  // Limited Use Abilities - Racial
+  currentRelentlessEnduranceUses?: number;
+  maxRelentlessEnduranceUses?: number;
+  currentBreathWeaponUses?: number;
+  maxBreathWeaponUses?: number;
 }
 
 export interface Spell {
@@ -52,7 +79,8 @@ export interface MagicInfo {
   cantripsKnown: string[];
   spellsKnownPrepared: string[];
   spellbook?: string[]; 
-  spellSlots: number[];
+  spellSlots: number[]; // Max spell slots per level (index 0 for 1st level, etc.)
+  currentSpellSlots: number[]; // Current available spell slots per level
 }
 
 export type AttributeName = keyof Character['attributes'];

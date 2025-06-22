@@ -7,8 +7,14 @@ import Button from './ui/Button';
 import Input from './ui/Input'; 
 import Textarea from './ui/Textarea';
 import { ALL_SKILLS, calculateProficiencyBonus, SkillDefinition } from '../skills';
-import { FIGHTING_STYLE_OPTIONS } from '../dndOptions'; 
+import { 
+    FIGHTING_STYLE_OPTIONS, getHitDieTypeForClass,
+    getMaxRages, getMaxBardicInspirations, getMaxChannelDivinityUses,
+    getMaxRelentlessEnduranceUses, getMaxSecondWindUses, getMaxActionSurgeUses,
+    getMaxBreathWeaponUses, getMaxKiPoints, getMaxLayOnHandsPool
+} from '../dndOptions'; 
 import { ALL_SPELLS_MAP } from '../spells'; 
+import { getClassSpellSlots, WARLOCK_PACT_SLOT_LEVEL } from '../classFeatures';
 
 interface CharacterSheetDisplayProps {
   character: Character;
@@ -25,9 +31,24 @@ const CharacterSheetDisplay: React.FC<CharacterSheetDisplayProps> = ({ character
   const [editableItems, setEditableItems] = useState<string>(character.items);
   const [expandedSpellName, setExpandedSpellName] = useState<string | null>(null);
 
+  // Rest System State
+  const [showRestModal, setShowRestModal] = useState<'short' | 'long' | null>(null);
+  const [hitDiceToSpendInput, setHitDiceToSpendInput] = useState<string>('1');
+  const [hdRollResults, setHdRollResults] = useState<string[]>([]); 
+  const [totalHdHealed, setTotalHdHealed] = useState<number>(0);
+  const [restMessage, setRestMessage] = useState<string | null>(null);
+
+  // Lay on Hands state
+  const [layOnHandsHealAmount, setLayOnHandsHealAmount] = useState<string>('1');
+
+
   useEffect(() => {
     setEditableItems(character.items); 
     setIsEditingItems(false); 
+    setRestMessage(null);
+    setHdRollResults([]);
+    setTotalHdHealed(0);
+    setLayOnHandsHealAmount('1');
   }, [character.items, character.id]);
 
 
@@ -42,16 +63,28 @@ const CharacterSheetDisplay: React.FC<CharacterSheetDisplayProps> = ({ character
     </div>
   );
 
-  const InfoItem: React.FC<{ label: string; value: string | number | undefined | null }> = ({ label, value }) => (
-    <div className="mb-1">
+  const InfoItem: React.FC<{ label: string; value: string | number | undefined | null; className?: string }> = ({ label, value, className }) => (
+    <div className={`mb-1 ${className}`}>
       <span className="font-semibold text-slate-600 dark:text-slate-400">{label}: </span> 
       <span className="text-slate-800 dark:text-slate-100">{value !== undefined && value !== null ? value : 'N/A'}</span>
     </div>
   );
 
   const proficiencyBonus = calculateProficiencyBonus(character.level);
-  const magicInfo = character.magic || { spellSlots: Array(9).fill(0), cantripsKnown: [], spellsKnownPrepared: [], spellbook: [] } as MagicInfo;
+  const magicInfo = character.magic || { 
+    spellSlots: Array(9).fill(0), 
+    currentSpellSlots: Array(9).fill(0), 
+    cantripsKnown: [], 
+    spellsKnownPrepared: [], 
+    spellbook: [] 
+  } as MagicInfo;
   
+  // Ensure currentSpellSlots array exists and has 9 elements, defaulting to spellSlots if not fully defined
+  if (!magicInfo.currentSpellSlots || magicInfo.currentSpellSlots.length !== 9) {
+    magicInfo.currentSpellSlots = [...magicInfo.spellSlots]; // Default to max if undefined/malformed
+  }
+
+
   let fightingStyleName = character.fightingStyle;
   const fightingStyleFeature = character.classFeatures?.find(cf => cf.featureName.toLowerCase().includes("estilo de luta") && cf.choiceValue);
   if (fightingStyleFeature && fightingStyleFeature.choiceValue) {
@@ -165,6 +198,245 @@ const CharacterSheetDisplay: React.FC<CharacterSheetDisplayProps> = ({ character
     setIsEditingItems(false);
   };
 
+  const handleUseSpellSlot = (slotLevelIndex: number) => {
+    if (!onCharacterUpdate || !character.magic) return;
+    const currentSlots = [...(character.magic.currentSpellSlots || character.magic.spellSlots)];
+    if (currentSlots[slotLevelIndex] > 0) {
+      currentSlots[slotLevelIndex]--;
+      onCharacterUpdate(character.id, { magic: { ...character.magic, currentSpellSlots: currentSlots } });
+    }
+  };
+
+  const handleRecoverSpellSlot = (slotLevelIndex: number) => {
+    if (!onCharacterUpdate || !character.magic) return;
+    const currentSlots = [...(character.magic.currentSpellSlots || character.magic.spellSlots)];
+    const maxSlotsForLevel = character.magic.spellSlots[slotLevelIndex];
+    if (currentSlots[slotLevelIndex] < maxSlotsForLevel) {
+      currentSlots[slotLevelIndex]++;
+      onCharacterUpdate(character.id, { magic: { ...character.magic, currentSpellSlots: currentSlots } });
+    }
+  };
+  
+  type LimitedAbilityType = 
+    'rage' | 'bardicInspiration' | 'channelDivinity' | 
+    'secondWind' | 'actionSurge' | 'kiPoints' | 
+    'relentlessEndurance' | 'breathWeapon';
+
+  const handleUseGenericAbility = (abilityType: LimitedAbilityType) => {
+      if (!onCharacterUpdate) return;
+      const updates: Partial<Character> = {};
+      switch (abilityType) {
+          case 'rage':
+              if ((character.currentRages ?? 0) > 0) updates.currentRages = (character.currentRages ?? 0) - 1;
+              break;
+          case 'bardicInspiration':
+              if ((character.currentBardicInspirations ?? 0) > 0) updates.currentBardicInspirations = (character.currentBardicInspirations ?? 0) - 1;
+              break;
+          case 'channelDivinity':
+              if ((character.currentChannelDivinityUses ?? 0) > 0) updates.currentChannelDivinityUses = (character.currentChannelDivinityUses ?? 0) - 1;
+              break;
+          case 'secondWind':
+              if ((character.currentSecondWindUses ?? 0) > 0) {
+                  updates.currentSecondWindUses = (character.currentSecondWindUses ?? 0) - 1;
+                  // Player applies HP gain manually: 1d10 + Fighter level
+                  const fighterLevel = character.level; // Assuming level is correct
+                  const roll = Math.floor(Math.random() * 10) + 1;
+                  const healed = roll + fighterLevel;
+                  updates.hp = Math.min(character.hpt, character.hp + healed);
+                  setRestMessage(`Retomar o Fôlego usado! Curado ${healed} PV (Rolagem: ${roll} + Nível ${fighterLevel}).`);
+              }
+              break;
+          case 'actionSurge':
+              if ((character.currentActionSurgeUses ?? 0) > 0) updates.currentActionSurgeUses = (character.currentActionSurgeUses ?? 0) - 1;
+              break;
+          case 'kiPoints':
+              if ((character.currentKiPoints ?? 0) > 0) updates.currentKiPoints = (character.currentKiPoints ?? 0) - 1;
+              break;
+          case 'relentlessEndurance':
+              if ((character.currentRelentlessEnduranceUses ?? 0) > 0) updates.currentRelentlessEnduranceUses = (character.currentRelentlessEnduranceUses ?? 0) - 1;
+              break;
+          case 'breathWeapon':
+              if ((character.currentBreathWeaponUses ?? 0) > 0) updates.currentBreathWeaponUses = (character.currentBreathWeaponUses ?? 0) - 1;
+              break;
+      }
+      if (Object.keys(updates).length > 0) {
+          onCharacterUpdate(character.id, updates);
+      }
+  };
+
+  const handleRecoverGenericAbilityUse = (abilityType: LimitedAbilityType) => {
+      if (!onCharacterUpdate) return;
+      const updates: Partial<Character> = {};
+      switch (abilityType) {
+          case 'rage':
+              if ((character.currentRages ?? 0) < (character.maxRages ?? 0)) updates.currentRages = (character.currentRages ?? 0) + 1;
+              break;
+          case 'bardicInspiration':
+              if ((character.currentBardicInspirations ?? 0) < (character.maxBardicInspirations ?? 0)) updates.currentBardicInspirations = (character.currentBardicInspirations ?? 0) + 1;
+              break;
+          case 'channelDivinity':
+              if ((character.currentChannelDivinityUses ?? 0) < (character.maxChannelDivinityUses ?? 0)) updates.currentChannelDivinityUses = (character.currentChannelDivinityUses ?? 0) + 1;
+              break;
+          case 'secondWind':
+              if ((character.currentSecondWindUses ?? 0) < (character.maxSecondWindUses ?? 0)) updates.currentSecondWindUses = (character.currentSecondWindUses ?? 0) + 1;
+              break;
+          case 'actionSurge':
+              if ((character.currentActionSurgeUses ?? 0) < (character.maxActionSurgeUses ?? 0)) updates.currentActionSurgeUses = (character.currentActionSurgeUses ?? 0) + 1;
+              break;
+          case 'kiPoints':
+              if ((character.currentKiPoints ?? 0) < (character.maxKiPoints ?? 0)) updates.currentKiPoints = (character.currentKiPoints ?? 0) + 1;
+              break;
+          case 'relentlessEndurance':
+              if ((character.currentRelentlessEnduranceUses ?? 0) < (character.maxRelentlessEnduranceUses ?? 0)) updates.currentRelentlessEnduranceUses = (character.currentRelentlessEnduranceUses ?? 0) + 1;
+              break;
+          case 'breathWeapon':
+              if ((character.currentBreathWeaponUses ?? 0) < (character.maxBreathWeaponUses ?? 0)) updates.currentBreathWeaponUses = (character.currentBreathWeaponUses ?? 0) + 1;
+              break;
+      }
+      if (Object.keys(updates).length > 0) {
+          onCharacterUpdate(character.id, updates);
+      }
+  };
+  
+  const handleUseLayOnHands = (amount: number, isCureDiseasePoison: boolean = false) => {
+    if (!onCharacterUpdate || !character.currentLayOnHandsPool === undefined) return;
+    
+    const cost = isCureDiseasePoison ? 5 : amount;
+    if (cost <= 0 || (character.currentLayOnHandsPool ?? 0) < cost) {
+        setRestMessage("Reserva de Cura pelas Mãos insuficiente.");
+        return;
+    }
+
+    const updates: Partial<Character> = {};
+    updates.currentLayOnHandsPool = (character.currentLayOnHandsPool ?? 0) - cost;
+
+    if (!isCureDiseasePoison) {
+        updates.hp = Math.min(character.hpt, character.hp + amount);
+        setRestMessage(`Curado ${amount} PV com Cura pelas Mãos. Reserva restante: ${updates.currentLayOnHandsPool}`);
+    } else {
+        setRestMessage(`Doença/Veneno curado com Cura pelas Mãos (custo 5 PV). Reserva restante: ${updates.currentLayOnHandsPool}`);
+    }
+    
+    onCharacterUpdate(character.id, updates);
+    setLayOnHandsHealAmount('1');
+  };
+
+
+  const handleSpendHitDice = () => {
+    if (!onCharacterUpdate) return;
+    const numDiceToSpend = parseInt(hitDiceToSpendInput, 10);
+    if (isNaN(numDiceToSpend) || numDiceToSpend <= 0 || numDiceToSpend > character.currentHitDice) {
+      setRestMessage("Número inválido de Dados de Vida para gastar.");
+      return;
+    }
+
+    const conModifier = calculateModifier(character.attributes.constitution);
+    const hitDieType = character.hitDieType;
+    let totalHealedThisAction = 0;
+    const currentRollResults: string[] = [];
+
+    for (let i = 0; i < numDiceToSpend; i++) {
+      const roll = Math.floor(Math.random() * hitDieType) + 1;
+      const healedAmount = Math.max(1, roll + conModifier); 
+      totalHealedThisAction += healedAmount;
+      currentRollResults.push(`d${hitDieType} rolado: ${roll} + CON ${conModifier} = ${healedAmount} PV`);
+    }
+
+    const newHp = Math.min(character.hpt, character.hp + totalHealedThisAction);
+    const newCurrentHitDice = character.currentHitDice - numDiceToSpend;
+
+    onCharacterUpdate(character.id, { hp: newHp, currentHitDice: newCurrentHitDice });
+    setHdRollResults(currentRollResults);
+    setTotalHdHealed(totalHealedThisAction);
+    setRestMessage(`Curado ${totalHealedThisAction} PV. ${numDiceToSpend} Dados de Vida gastos.`);
+    setHitDiceToSpendInput('1'); 
+  };
+
+  const applyShortRestBenefits = () => {
+    if (!onCharacterUpdate) return;
+    const updates: Partial<Character> = { ...character }; 
+    let messages = ["Descanso Curto finalizado."];
+
+    if (character.charClass === 'Bruxo' && updates.magic) {
+        updates.magic.spellSlots = getClassSpellSlots(character.charClass, character.level); 
+        updates.magic.currentSpellSlots = [...updates.magic.spellSlots]; 
+        messages.push("Espaços de Magia de Pacto do Bruxo recuperados.");
+    }
+    
+    if (character.charClass === 'Clérigo' || character.charClass === 'Paladino') {
+        if(character.maxChannelDivinityUses !== undefined) updates.currentChannelDivinityUses = character.maxChannelDivinityUses;
+        messages.push("Usos de Canalizar Divindade recuperados.");
+    }
+
+    if (character.charClass === 'Bardo' && character.level >= 5 && character.maxBardicInspirations !== undefined) {
+        updates.currentBardicInspirations = character.maxBardicInspirations;
+        messages.push("Usos de Inspiração de Bardo recuperados.");
+    }
+    
+    if (character.charClass === 'Guerreiro') {
+        if (character.maxSecondWindUses !== undefined) updates.currentSecondWindUses = character.maxSecondWindUses;
+        if (character.maxActionSurgeUses !== undefined) updates.currentActionSurgeUses = character.maxActionSurgeUses;
+        messages.push("Usos de Retomar o Fôlego e Surto de Ação recuperados.");
+    }
+    
+    if (character.race === 'Draconato' && character.maxBreathWeaponUses !== undefined) {
+        updates.currentBreathWeaponUses = character.maxBreathWeaponUses;
+        messages.push("Uso da Arma de Sopro recuperado.");
+    }
+
+    if (character.charClass === 'Monge' && character.maxKiPoints !== undefined) {
+        updates.currentKiPoints = character.maxKiPoints;
+        messages.push("Pontos de Chi recuperados.");
+    }
+    
+    messages.push("Lembre-se de recuperar usos de habilidades que recarregam em descanso curto (ex: Ki de Monge, Retomar Fôlego de Guerreiro).");
+
+    onCharacterUpdate(character.id, updates);
+    setRestMessage(messages.join(" "));
+    setShowRestModal(null);
+    setHdRollResults([]);
+    setTotalHdHealed(0);
+  };
+
+  const applyLongRestBenefits = () => {
+    if (!onCharacterUpdate) return;
+    const updates: Partial<Character> = { ...character };
+    let messages = ["Descanso Longo finalizado."];
+
+    updates.hp = character.hpt;
+    messages.push(`HP totalmente recuperado para ${character.hpt}.`);
+
+    const hitDiceRecovered = Math.max(1, Math.floor(character.maxHitDice / 2));
+    updates.currentHitDice = Math.min(character.maxHitDice, character.currentHitDice + hitDiceRecovered);
+    messages.push(`${hitDiceRecovered} Dados de Vida recuperados (Total agora: ${updates.currentHitDice}/${character.maxHitDice}).`);
+
+    if (updates.magic) {
+        const maxSpellSlots = getClassSpellSlots(character.charClass, character.level);
+        updates.magic.spellSlots = maxSpellSlots; 
+        updates.magic.currentSpellSlots = [...maxSpellSlots]; 
+        messages.push("Todos os espaços de magia recuperados.");
+    }
+    
+    // Restore all trackable limited use abilities
+    if (character.maxRages !== undefined) updates.currentRages = character.maxRages;
+    if (character.maxBardicInspirations !== undefined) updates.currentBardicInspirations = character.maxBardicInspirations;
+    if (character.maxChannelDivinityUses !== undefined) updates.currentChannelDivinityUses = character.maxChannelDivinityUses;
+    if (character.maxSecondWindUses !== undefined) updates.currentSecondWindUses = character.maxSecondWindUses;
+    if (character.maxActionSurgeUses !== undefined) updates.currentActionSurgeUses = character.maxActionSurgeUses;
+    if (character.maxKiPoints !== undefined) updates.currentKiPoints = character.maxKiPoints;
+    if (character.maxLayOnHandsPool !== undefined) updates.currentLayOnHandsPool = character.maxLayOnHandsPool;
+    if (character.maxRelentlessEnduranceUses !== undefined) updates.currentRelentlessEnduranceUses = character.maxRelentlessEnduranceUses;
+    if (character.maxBreathWeaponUses !== undefined) updates.currentBreathWeaponUses = character.maxBreathWeaponUses;
+
+    messages.push("Todos os usos de habilidades rastreáveis recuperados.");
+    messages.push("Lembre-se de recuperar usos de habilidades que recarregam em descanso longo.");
+
+    onCharacterUpdate(character.id, updates);
+    setRestMessage(messages.join(" "));
+    setShowRestModal(null);
+  };
+
+
   const renderClassFeatures = (features?: ClassFeatureSelection[]) => {
     if (!features || features.length === 0) {
       return <p className="text-slate-800 dark:text-slate-100">Nenhuma característica de classe específica listada.</p>;
@@ -192,7 +464,7 @@ const CharacterSheetDisplay: React.FC<CharacterSheetDisplayProps> = ({ character
                 {feature.type === 'asi' && (
                   <span className="italic"> (Incremento no Valor de Habilidade)</span>
                 )}
-                {feature.description && (feature.type !== 'choice' || !feature.choiceLabel) && ( // Show main description for auto/asi, or if choice has no specific label description
+                {feature.description && (feature.type !== 'choice' || !feature.choiceLabel) && ( 
                     <details className="text-xs text-slate-600 dark:text-slate-400 pl-2 cursor-pointer">
                         <summary className="hover:text-sky-500 dark:hover:text-sky-400">Ver descrição</summary>
                         <p className="mt-1 whitespace-pre-wrap text-justify">{feature.description}</p>
@@ -211,7 +483,7 @@ const CharacterSheetDisplay: React.FC<CharacterSheetDisplayProps> = ({ character
       ));
   };
   
-  const renderRacialFeatures = (features?: RacialFeatureSelection[]) => {
+  const renderRacialFeaturesDisplay = (features?: RacialFeatureSelection[]) => {
     if (!features || features.length === 0) {
         return <p className="text-slate-800 dark:text-slate-100">Nenhuma característica racial específica listada.</p>;
     }
@@ -267,8 +539,109 @@ const CharacterSheetDisplay: React.FC<CharacterSheetDisplayProps> = ({ character
           <InfoItem label="Antecedentes" value={character.background} />
           <InfoItem label="Tendência" value={character.alignment} />
           <InfoItem label="Idade" value={character.age} />
+          <InfoItem label="Dados de Vida" value={`${character.currentHitDice}d${character.hitDieType} / ${character.maxHitDice}d${character.hitDieType}`} />
         </div>
       </div>
+
+       <Section title="Recursos e Habilidades de Uso Limitado">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {/* Class Abilities */}
+                {character.charClass === 'Bárbaro' && character.maxRages !== undefined && (
+                    <div className="p-3 bg-slate-100 dark:bg-slate-600/50 rounded-md">
+                        <InfoItem label="Fúrias" value={`${character.currentRages ?? 0} / ${character.maxRages ?? 0}`} />
+                        <div className="flex space-x-1 mt-1">
+                            <Button onClick={() => handleUseGenericAbility('rage')} size="sm" className="text-xs px-2 py-1 flex-1" disabled={(character.currentRages ?? 0) === 0}>Usar</Button>
+                            <Button onClick={() => handleRecoverGenericAbilityUse('rage')} variant="secondary" size="sm" className="text-xs px-2 py-1 flex-1"  disabled={(character.currentRages ?? 0) >= (character.maxRages ?? 0)}>Recuperar</Button>
+                        </div>
+                    </div>
+                )}
+                {character.charClass === 'Bardo' && character.maxBardicInspirations !== undefined && (
+                    <div className="p-3 bg-slate-100 dark:bg-slate-600/50 rounded-md">
+                        <InfoItem label="Inspirações de Bardo" value={`${character.currentBardicInspirations ?? 0} / ${character.maxBardicInspirations ?? 0}`} />
+                         <div className="flex space-x-1 mt-1">
+                            <Button onClick={() => handleUseGenericAbility('bardicInspiration')} size="sm" className="text-xs px-2 py-1 flex-1" disabled={(character.currentBardicInspirations ?? 0) === 0}>Usar</Button>
+                            <Button onClick={() => handleRecoverGenericAbilityUse('bardicInspiration')} variant="secondary" size="sm" className="text-xs px-2 py-1 flex-1" disabled={(character.currentBardicInspirations ?? 0) >= (character.maxBardicInspirations ?? 0)}>Recuperar</Button>
+                        </div>
+                    </div>
+                )}
+                {(character.charClass === 'Clérigo' || character.charClass === 'Paladino') && character.maxChannelDivinityUses !== undefined && (
+                     <div className="p-3 bg-slate-100 dark:bg-slate-600/50 rounded-md">
+                        <InfoItem label="Canalizar Divindade" value={`${character.currentChannelDivinityUses ?? 0} / ${character.maxChannelDivinityUses ?? 0}`} />
+                         <div className="flex space-x-1 mt-1">
+                            <Button onClick={() => handleUseGenericAbility('channelDivinity')} size="sm" className="text-xs px-2 py-1 flex-1" disabled={(character.currentChannelDivinityUses ?? 0) === 0}>Usar</Button>
+                            <Button onClick={() => handleRecoverGenericAbilityUse('channelDivinity')} variant="secondary" size="sm" className="text-xs px-2 py-1 flex-1" disabled={(character.currentChannelDivinityUses ?? 0) >= (character.maxChannelDivinityUses ?? 0)}>Recuperar</Button>
+                        </div>
+                    </div>
+                )}
+                {character.charClass === 'Guerreiro' && character.maxSecondWindUses !== undefined && (
+                    <div className="p-3 bg-slate-100 dark:bg-slate-600/50 rounded-md">
+                        <InfoItem label="Retomar o Fôlego" value={`${character.currentSecondWindUses ?? 0} / ${character.maxSecondWindUses ?? 0}`} />
+                        <div className="flex space-x-1 mt-1">
+                            <Button onClick={() => handleUseGenericAbility('secondWind')} size="sm" className="text-xs px-2 py-1 flex-1" disabled={(character.currentSecondWindUses ?? 0) === 0}>Usar</Button>
+                            <Button onClick={() => handleRecoverGenericAbilityUse('secondWind')} variant="secondary" size="sm" className="text-xs px-2 py-1 flex-1" disabled={(character.currentSecondWindUses ?? 0) >= (character.maxSecondWindUses ?? 0)}>Recuperar</Button>
+                        </div>
+                    </div>
+                )}
+                {character.charClass === 'Guerreiro' && character.maxActionSurgeUses !== undefined && (
+                    <div className="p-3 bg-slate-100 dark:bg-slate-600/50 rounded-md">
+                        <InfoItem label="Surto de Ação" value={`${character.currentActionSurgeUses ?? 0} / ${character.maxActionSurgeUses ?? 0}`} />
+                        <div className="flex space-x-1 mt-1">
+                            <Button onClick={() => handleUseGenericAbility('actionSurge')} size="sm" className="text-xs px-2 py-1 flex-1" disabled={(character.currentActionSurgeUses ?? 0) === 0}>Usar</Button>
+                            <Button onClick={() => handleRecoverGenericAbilityUse('actionSurge')} variant="secondary" size="sm" className="text-xs px-2 py-1 flex-1" disabled={(character.currentActionSurgeUses ?? 0) >= (character.maxActionSurgeUses ?? 0)}>Recuperar</Button>
+                        </div>
+                    </div>
+                )}
+                {character.charClass === 'Monge' && character.maxKiPoints !== undefined && (
+                     <div className="p-3 bg-slate-100 dark:bg-slate-600/50 rounded-md">
+                        <InfoItem label="Pontos de Chi" value={`${character.currentKiPoints ?? 0} / ${character.maxKiPoints ?? 0}`} />
+                        <div className="flex space-x-1 mt-1">
+                            <Button onClick={() => handleUseGenericAbility('kiPoints')} size="sm" className="text-xs px-2 py-1 flex-1" disabled={(character.currentKiPoints ?? 0) === 0}>Gastar Ponto</Button>
+                            <Button onClick={() => handleRecoverGenericAbilityUse('kiPoints')} variant="secondary" size="sm" className="text-xs px-2 py-1 flex-1" disabled={(character.currentKiPoints ?? 0) >= (character.maxKiPoints ?? 0)}>Recuperar Ponto</Button>
+                        </div>
+                    </div>
+                )}
+                 {character.charClass === 'Paladino' && character.maxLayOnHandsPool !== undefined && (
+                     <div className="p-3 bg-slate-100 dark:bg-slate-600/50 rounded-md md:col-span-2 lg:col-span-1">
+                        <InfoItem label="Cura Pelas Mãos (Reserva)" value={`${character.currentLayOnHandsPool ?? 0} / ${character.maxLayOnHandsPool ?? 0} PV`} />
+                        <div className="mt-1">
+                             <Input 
+                                label="PV para Curar"
+                                id={`layonhands-heal-${character.id}`}
+                                type="number"
+                                value={layOnHandsHealAmount}
+                                onChange={(e) => setLayOnHandsHealAmount(e.target.value)}
+                                min="1"
+                                max={character.currentLayOnHandsPool?.toString() ?? '1'}
+                                className="text-xs"
+                             />
+                             <Button onClick={() => handleUseLayOnHands(parseInt(layOnHandsHealAmount,10) || 0)} size="sm" className="text-xs px-2 py-1 w-full mt-1" disabled={(character.currentLayOnHandsPool ?? 0) === 0}>Curar PV</Button>
+                             <Button onClick={() => handleUseLayOnHands(0, true)} variant="secondary" size="sm" className="text-xs px-2 py-1 w-full mt-1" disabled={(character.currentLayOnHandsPool ?? 0) < 5}>Curar Doença/Veneno (5PV)</Button>
+                        </div>
+                    </div>
+                )}
+
+                {/* Racial Abilities */}
+                {character.race === 'Meio-Orc' && character.maxRelentlessEnduranceUses !== undefined && (
+                    <div className="p-3 bg-slate-100 dark:bg-slate-600/50 rounded-md">
+                        <InfoItem label="Resistência Implacável" value={`${character.currentRelentlessEnduranceUses ?? 0} / ${character.maxRelentlessEnduranceUses ?? 0}`} />
+                        <div className="flex space-x-1 mt-1">
+                            <Button onClick={() => handleUseGenericAbility('relentlessEndurance')} size="sm" className="text-xs px-2 py-1 flex-1" disabled={(character.currentRelentlessEnduranceUses ?? 0) === 0}>Marcar Usado</Button>
+                            <Button onClick={() => handleRecoverGenericAbilityUse('relentlessEndurance')} variant="secondary" size="sm" className="text-xs px-2 py-1 flex-1" disabled={(character.currentRelentlessEnduranceUses ?? 0) >= (character.maxRelentlessEnduranceUses ?? 0)}>Recuperar</Button>
+                        </div>
+                    </div>
+                )}
+                {character.race === 'Draconato' && character.maxBreathWeaponUses !== undefined && (
+                    <div className="p-3 bg-slate-100 dark:bg-slate-600/50 rounded-md">
+                        <InfoItem label="Arma de Sopro" value={`${character.currentBreathWeaponUses ?? 0} / ${character.maxBreathWeaponUses ?? 0}`} />
+                        <div className="flex space-x-1 mt-1">
+                            <Button onClick={() => handleUseGenericAbility('breathWeapon')} size="sm" className="text-xs px-2 py-1 flex-1" disabled={(character.currentBreathWeaponUses ?? 0) === 0}>Usar</Button>
+                            <Button onClick={() => handleRecoverGenericAbilityUse('breathWeapon')} variant="secondary" size="sm" className="text-xs px-2 py-1 flex-1" disabled={(character.currentBreathWeaponUses ?? 0) >= (character.maxBreathWeaponUses ?? 0)}>Recuperar</Button>
+                        </div>
+                    </div>
+                )}
+            </div>
+        </Section>
+
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 text-center">
         <div className="p-4 bg-sky-100 dark:bg-slate-700/70 rounded-lg shadow">
@@ -328,6 +701,68 @@ const CharacterSheetDisplay: React.FC<CharacterSheetDisplayProps> = ({ character
         </Section>
       )}
 
+      {onCharacterUpdate && (
+        <Section title="Descanso">
+          <div className="flex space-x-2 mb-4">
+            <Button onClick={() => { setShowRestModal('short'); setRestMessage(null); setHdRollResults([]); setTotalHdHealed(0); }} variant="primary">Descanso Curto</Button>
+            <Button onClick={() => { setShowRestModal('long'); setRestMessage(null);}} variant="primary">Descanso Longo</Button>
+          </div>
+
+          {restMessage && (
+            <div className={`p-3 my-2 rounded-md text-sm ${restMessage.includes("inválido") || restMessage.includes("insuficiente") ? 'bg-red-100 dark:bg-red-800 text-red-700 dark:text-red-200' : 'bg-green-100 dark:bg-green-800 text-green-700 dark:text-green-200'}`}>
+              {restMessage.split('. ').map((msg, idx) => <p key={idx}>{msg}{idx < restMessage.split('. ').length -1 ? '.' : ''}</p>)}
+            </div>
+          )}
+
+          {showRestModal === 'short' && (
+            <div className="p-4 border border-slate-300 dark:border-slate-600 rounded-md mt-4 bg-slate-100 dark:bg-slate-700">
+              <h4 className="text-lg font-semibold text-sky-700 dark:text-sky-300 mb-2">Opções de Descanso Curto</h4>
+              <p className="text-sm text-slate-700 dark:text-slate-300 mb-2">Dados de Vida Atuais: {character.currentHitDice}d{character.hitDieType}</p>
+              {character.currentHitDice > 0 ? (
+                <div className="flex items-end space-x-2 mb-3">
+                  <Input
+                    label="Dados de Vida a Gastar"
+                    id={`spend-hd-${character.id}`}
+                    type="number"
+                    value={hitDiceToSpendInput}
+                    onChange={(e) => setHitDiceToSpendInput(e.target.value)}
+                    min="1"
+                    max={character.currentHitDice.toString()}
+                    className="w-32"
+                  />
+                  <Button onClick={handleSpendHitDice} variant="secondary" className="py-2.5">Gastar Dados & Curar</Button>
+                </div>
+              ) : (
+                <p className="text-sm text-slate-500 dark:text-slate-400 mb-3">Nenhum Dado de Vida restante para gastar.</p>
+              )}
+              {hdRollResults.length > 0 && (
+                <div className="text-xs text-slate-600 dark:text-slate-400 mb-2">
+                  <p><strong>Rolagens:</strong></p>
+                  {hdRollResults.map((roll, idx) => <p key={idx}>{roll}</p>)}
+                  <p><strong>Total Curado com Dados de Vida: {totalHdHealed} PV</strong></p>
+                </div>
+              )}
+              <Button onClick={applyShortRestBenefits} variant="primary" className="w-full mt-2">Finalizar Descanso Curto (Outros Benefícios)</Button>
+              <Button onClick={() => setShowRestModal(null)} variant="secondary" className="w-full mt-2">Cancelar</Button>
+            </div>
+          )}
+
+          {showRestModal === 'long' && (
+            <div className="p-4 border border-slate-300 dark:border-slate-600 rounded-md mt-4 bg-slate-100 dark:bg-slate-700">
+              <h4 className="text-lg font-semibold text-sky-700 dark:text-sky-300 mb-2">Confirmar Descanso Longo?</h4>
+              <p className="text-sm text-slate-700 dark:text-slate-300 mb-3">
+                Isso irá recuperar todo o HP, metade dos Dados de Vida (mín. 1), todos os espaços de magia e outros recursos de classe.
+              </p>
+              <div className="flex space-x-2">
+                <Button onClick={applyLongRestBenefits} variant="primary" className="flex-1">Sim, Descansar</Button>
+                <Button onClick={() => setShowRestModal(null)} variant="secondary" className="flex-1">Cancelar</Button>
+              </div>
+            </div>
+          )}
+        </Section>
+      )}
+
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Section title="Atributos">
           <div className="grid grid-cols-1 gap-2">
@@ -368,7 +803,7 @@ const CharacterSheetDisplay: React.FC<CharacterSheetDisplayProps> = ({ character
       </Section>
       
       <Section title="Características Raciais">
-        {renderRacialFeatures(character.racialFeatures)}
+        {renderRacialFeaturesDisplay(character.racialFeatures)}
       </Section>
 
       <Section title="Características de Classe">
@@ -451,13 +886,55 @@ const CharacterSheetDisplay: React.FC<CharacterSheetDisplayProps> = ({ character
 
           <div className="mt-3">
             <h4 className="font-semibold text-slate-700 dark:text-slate-300 mb-1">Espaços de Magia por Nível:</h4>
-            <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
-              {magicInfo.spellSlots?.map((slots, i) => (
-                <div key={`slot-level-${i+1}`} className="p-2 bg-slate-100 dark:bg-slate-600/70 rounded text-center">
-                  <div className="text-xs text-slate-600 dark:text-slate-400">Nível {i+1}</div>
-                  <div className="text-lg font-semibold text-slate-800 dark:text-slate-100">{slots === undefined ? 0 : slots}</div>
-                </div>
-              ))}
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+              {magicInfo.spellSlots?.map((maxSlots, i) => {
+                if (maxSlots === 0 && (magicInfo.currentSpellSlots?.[i] ?? 0) === 0 && character.charClass !== 'Bruxo') return null; 
+                
+                let displayLevel = i + 1;
+                let actualMaxSlots = maxSlots;
+                let actualCurrentSlots = magicInfo.currentSpellSlots?.[i] ?? 0;
+
+                if (character.charClass === 'Bruxo' && character.level > 0 && WARLOCK_PACT_SLOT_LEVEL.length >= character.level) {
+                    const warlockPactSlotLevel = WARLOCK_PACT_SLOT_LEVEL[character.level -1];
+                    if (displayLevel !== warlockPactSlotLevel) return null; 
+                    actualMaxSlots = magicInfo.spellSlots[warlockPactSlotLevel-1];
+                    actualCurrentSlots = magicInfo.currentSpellSlots[warlockPactSlotLevel-1];
+                }
+                 if(actualMaxSlots === 0 && actualCurrentSlots === 0) return null;
+
+
+                return (
+                  <div key={`slot-level-${i+1}`} className="p-2 bg-slate-100 dark:bg-slate-600/70 rounded shadow">
+                    <div className="text-xs text-slate-600 dark:text-slate-400 font-medium">Nível {displayLevel}</div>
+                    <div className="text-lg font-semibold text-slate-800 dark:text-slate-100 my-1">
+                      {actualCurrentSlots} / {actualMaxSlots}
+                    </div>
+                    {onCharacterUpdate && actualMaxSlots > 0 && (
+                      <div className="flex space-x-1 mt-1">
+                        <Button 
+                          onClick={() => handleUseSpellSlot(i)} 
+                          size="sm" 
+                          className="text-xs px-1.5 py-0.5 flex-1"
+                          disabled={actualCurrentSlots === 0}
+                          aria-label={`Usar espaço de magia nível ${displayLevel}`}
+                        >
+                          Usar
+                        </Button>
+                        <Button 
+                          onClick={() => handleRecoverSpellSlot(i)} 
+                          variant="secondary" 
+                          size="sm" 
+                          className="text-xs px-1.5 py-0.5 flex-1"
+                          disabled={actualCurrentSlots >= actualMaxSlots}
+                          aria-label={`Recuperar espaço de magia nível ${displayLevel}`}
+                        >
+                          Rec.
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
         </Section>

@@ -1,5 +1,7 @@
 
 import { AttributeName, RANKS as RANK_OPTIONS } from './types'; // Import RANK_OPTIONS from types
+import { calculateModifier } from './components/AttributeField';
+
 
 export const RACES = [
   "Anão da Colina", "Anão da Montanha", 
@@ -63,3 +65,89 @@ export const CLASS_SPELLCASTING_ABILITIES: Record<string, AttributeName | undefi
 };
 
 export const RANKS = [...RANK_OPTIONS];
+
+export const getHitDieTypeForClass = (className: string): number => {
+  switch (className) {
+    case 'Feiticeiro':
+    case 'Mago':
+      return 6; // d6
+    case 'Bardo':
+    case 'Clérigo':
+    case 'Druida':
+    case 'Monge':
+    case 'Ladino':
+    case 'Bruxo':
+      return 8; // d8
+    case 'Guerreiro':
+    case 'Paladino':
+    case 'Patrulheiro':
+      return 10; // d10
+    case 'Bárbaro':
+      return 12; // d12
+    default:
+      return 8; // Default to d8 if class is unknown or not typically a player class
+  }
+};
+
+// Limited Use Abilities - Max Uses Calculation
+export const getMaxRages = (level: number): number => {
+  if (level < 1) return 0;
+  if (level < 3) return 2;
+  if (level < 6) return 3;
+  if (level < 12) return 4;
+  if (level < 17) return 5;
+  if (level < 20) return 6;
+  return 99; // Represents "Unlimited" for Level 20 Barbarians (Primal Champion)
+};
+
+export const getMaxBardicInspirations = (charismaScore: number): number => {
+  return Math.max(1, calculateModifier(charismaScore));
+};
+
+export const getMaxChannelDivinityUses = (className: string, level: number): number => {
+  if (className === 'Clérigo') {
+    if (level < 2) return 0;
+    if (level < 6) return 1;
+    if (level < 18) return 2;
+    return 3;
+  }
+  if (className === 'Paladino') {
+    if (level < 3) return 0;
+    return 1; // Paladins generally get 1 use of Channel Divinity per short/long rest. Specific oaths might grant more, handled by feature text.
+  }
+  return 0;
+};
+
+export const getMaxRelentlessEnduranceUses = (race: string): number => {
+  return race === "Meio-Orc" ? 1 : 0;
+};
+
+export const getMaxSecondWindUses = (charClass: string): number => {
+  return charClass === "Guerreiro" ? 1 : 0;
+};
+
+export const getMaxActionSurgeUses = (charClass: string, level: number): number => {
+  if (charClass === "Guerreiro") {
+    if (level >= 17) return 2;
+    if (level >= 2) return 1;
+  }
+  return 0;
+};
+
+export const getMaxBreathWeaponUses = (race: string): number => {
+  return race === "Draconato" ? 1 : 0;
+};
+
+export const getMaxKiPoints = (charClass: string, level: number): number => {
+  if (charClass === "Monge" && level >= 2) {
+    return level;
+  }
+  return 0;
+};
+
+export const getMaxLayOnHandsPool = (charClass: string, level: number): number => {
+  if (charClass === "Paladino" && level >= 1) {
+    return level * 5;
+  }
+  return 0;
+};
