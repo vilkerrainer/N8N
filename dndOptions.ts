@@ -1,5 +1,5 @@
 
-import { AttributeName } from './types';
+import { AttributeName, RANKS as RANK_OPTIONS } from './types'; // Import RANK_OPTIONS from types
 
 export const RACES = [
   "Anão da Colina", "Anão da Montanha", 
@@ -62,3 +62,5 @@ export const CLASS_SPELLCASTING_ABILITIES: Record<string, AttributeName | undefi
   "Ladino": undefined,
   "Monge": undefined,
 };
+
+export const RANKS = [...RANK_OPTIONS]; // Export a copy of RANKS from types.ts

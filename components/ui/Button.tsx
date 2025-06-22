@@ -3,9 +3,10 @@ import React from 'react';
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'primary' | 'secondary';
+  size?: 'sm' | 'md' | 'lg' | string; // Added size prop, allow any string for flexibility if needed
 }
 
-const Button: React.FC<ButtonProps> = ({ children, variant = 'primary', className, ...props }) => {
+const Button: React.FC<ButtonProps> = ({ children, variant = 'primary', size, className, ...props }) => {
   const baseStyles = "px-4 py-2 rounded-md font-semibold shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-slate-900 transition-colors duration-150";
   
   // Standard Tailwind palette
@@ -19,11 +20,16 @@ const Button: React.FC<ButtonProps> = ({ children, variant = 'primary', classNam
   const styles = variant === 'primary' 
     ? `${lightPrimaryStyles} ${darkPrimaryStyles}` 
     : `${lightSecondaryStyles} ${darkSecondaryStyles}`;
+  
+  // Basic size handling - consumers can override with className if more specific styles are needed.
+  // This example doesn't add specific size classes here, as the error was about prop existence.
+  // The consuming component (CharacterSheetDisplay) was already providing text-xs, px-2, py-1.
 
   return (
     <button
       {...props}
       className={`${baseStyles} ${styles} ${className}`}
+      // data-size={size} // Optionally add data attribute if needed for styling/debugging
     >
       {children}
     </button>

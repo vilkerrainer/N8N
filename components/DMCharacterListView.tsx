@@ -1,7 +1,7 @@
 
 
 import React, { useState } from 'react';
-import { Character, ATTRIBUTE_NAMES, ATTRIBUTE_LABELS, AttributeName } from '../types';
+import { Character, ATTRIBUTE_NAMES, ATTRIBUTE_LABELS, AttributeName, RANKS, Rank } from '../types';
 import Button from './ui/Button'; 
 import Input from './ui/Input';   
 import AttributeField, { calculateModifier, formatModifier } from './AttributeField';
@@ -51,6 +51,12 @@ const DMCharacterListView: React.FC<DMCharacterListViewProps> = ({ characters, o
     handleInputChange(char.id, 'damageAmount', ''); 
   };
 
+  const handleRankChange = (charId: string, newRank: Rank) => {
+    if (onDMUpdateCharacter) {
+      onDMUpdateCharacter(charId, { rank: newRank });
+    }
+  };
+
 
   if (characters.length === 0) {
     return (
@@ -89,6 +95,7 @@ const DMCharacterListView: React.FC<DMCharacterListViewProps> = ({ characters, o
                 <div>
                   <h3 className="text-xl font-bold text-sky-600 dark:text-sky-500">{char.name}</h3>
                   <p className="text-sm text-slate-600 dark:text-slate-400">{char.race} / {char.charClass} / Nível {char.level}</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-300">Rank: {char.rank || RANKS[0]}</p>
                 </div>
               </div>
               <div className="space-y-2 text-sm mb-4 flex-grow">
@@ -104,6 +111,22 @@ const DMCharacterListView: React.FC<DMCharacterListViewProps> = ({ characters, o
                   <span className="font-semibold text-slate-700 dark:text-slate-300">Moedas:</span>
                   <span className="text-slate-800 dark:text-slate-100">{char.coins}</span>
                 </div>
+
+                {onDMUpdateCharacter && (
+                   <div className="mt-2">
+                     <label htmlFor={`rank-select-${char.id}`} className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
+                        Alterar Rank:
+                     </label>
+                     <select
+                        id={`rank-select-${char.id}`}
+                        value={char.rank || RANKS[0]}
+                        onChange={(e) => handleRankChange(char.id, e.target.value as Rank)}
+                        className="w-full px-2 py-1.5 text-xs bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-sky-500 dark:focus:border-sky-500 text-slate-900 dark:text-slate-100"
+                      >
+                        {RANKS.map(r => <option key={r} value={r}>{r}</option>)}
+                      </select>
+                   </div>
+                )}
 
                 {showAttributes && (
                   <div className="mt-3 pt-3 border-t border-slate-200 dark:border-slate-600">

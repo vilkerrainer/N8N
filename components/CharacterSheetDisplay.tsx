@@ -1,10 +1,11 @@
 
 
-import React, { useState } from 'react';
-import { Character, ATTRIBUTE_NAMES, ATTRIBUTE_LABELS, AttributeName, MagicInfo, Spell } from '../types';
+import React, { useState, useEffect } from 'react';
+import { Character, ATTRIBUTE_NAMES, ATTRIBUTE_LABELS, AttributeName, MagicInfo, Spell, ClassFeatureSelection, RacialFeatureSelection, RANKS, Rank } from '../types';
 import AttributeField, { calculateModifier, formatModifier } from './AttributeField';
 import Button from './ui/Button';
 import Input from './ui/Input'; 
+import Textarea from './ui/Textarea';
 import { ALL_SKILLS, calculateProficiencyBonus, SkillDefinition } from '../skills';
 import { FIGHTING_STYLE_OPTIONS } from '../dndOptions'; 
 import { ALL_SPELLS_MAP } from '../spells'; 
@@ -18,12 +19,25 @@ interface CharacterSheetDisplayProps {
 
 const CharacterSheetDisplay: React.FC<CharacterSheetDisplayProps> = ({ character, onEdit, onBackToList, onCharacterUpdate }) => {
   const [healAmount, setHealAmount] = useState<string>('');
-  const [newItem, setNewItem] = useState<string>('');
+  const [damageAmount, setDamageAmount] = useState<string>('');
+  const [coinsAmount, setCoinsAmount] = useState<string>('');
+  const [isEditingItems, setIsEditingItems] = useState<boolean>(false);
+  const [editableItems, setEditableItems] = useState<string>(character.items);
   const [expandedSpellName, setExpandedSpellName] = useState<string | null>(null);
 
-  const Section: React.FC<{ title: string; children: React.ReactNode; className?: string }> = ({ title, children, className }) => (
+  useEffect(() => {
+    setEditableItems(character.items); 
+    setIsEditingItems(false); 
+  }, [character.items, character.id]);
+
+
+  const Section: React.FC<{ title: string; children: React.ReactNode; className?: string, titleActions?: React.ReactNode }> = 
+    ({ title, children, className, titleActions }) => (
     <div className={`mb-6 p-4 bg-slate-50 dark:bg-slate-700 rounded-lg shadow ${className}`}>
-      <h3 className="text-xl font-semibold text-sky-600 dark:text-sky-400 mb-3 border-b-2 border-sky-200 dark:border-sky-600 pb-2">{title}</h3>
+      <div className="flex justify-between items-center mb-3 border-b-2 border-sky-200 dark:border-sky-600 pb-2">
+        <h3 className="text-xl font-semibold text-sky-600 dark:text-sky-400">{title}</h3>
+        {titleActions && <div className="flex-shrink-0 ml-4">{titleActions}</div>}
+      </div>
       {children}
     </div>
   );
@@ -37,7 +51,14 @@ const CharacterSheetDisplay: React.FC<CharacterSheetDisplayProps> = ({ character
 
   const proficiencyBonus = calculateProficiencyBonus(character.level);
   const magicInfo = character.magic || { spellSlots: Array(9).fill(0), cantripsKnown: [], spellsKnownPrepared: [], spellbook: [] } as MagicInfo;
-  const fightingStyleObj = FIGHTING_STYLE_OPTIONS.find(fs => fs.name === character.fightingStyle);
+  
+  let fightingStyleName = character.fightingStyle;
+  const fightingStyleFeature = character.classFeatures?.find(cf => cf.featureName.toLowerCase().includes("estilo de luta") && cf.choiceValue);
+  if (fightingStyleFeature && fightingStyleFeature.choiceValue) {
+    fightingStyleName = fightingStyleFeature.choiceValue;
+  }
+  const fightingStyleObj = FIGHTING_STYLE_OPTIONS.find(fs => fs.name === fightingStyleName);
+
 
   let calculatedSpellSaveDC: number | null = null;
   let calculatedSpellAttackBonus: number | null = null;
@@ -102,7 +123,7 @@ const CharacterSheetDisplay: React.FC<CharacterSheetDisplayProps> = ({ character
   };
 
 
-  const handleHeal = () => {
+  const handlePlayerHeal = () => {
     if (!onCharacterUpdate || !healAmount) return;
     const amount = parseInt(healAmount, 10);
     if (isNaN(amount) || amount <= 0) return;
@@ -111,14 +132,109 @@ const CharacterSheetDisplay: React.FC<CharacterSheetDisplayProps> = ({ character
     setHealAmount('');
   };
 
-  const handleAddItem = () => {
-    if (!onCharacterUpdate || !newItem.trim()) return;
-    const updatedItems = character.items 
-      ? `${character.items}\n${newItem.trim()}`
-      : newItem.trim();
-    onCharacterUpdate(character.id, { items: updatedItems });
-    setNewItem('');
+  const handlePlayerTakeDamage = () => {
+    if (!onCharacterUpdate || !damageAmount) return;
+    const amount = parseInt(damageAmount, 10);
+    if (isNaN(amount) || amount <= 0) return;
+    const newHp = Math.max(0, character.hp - amount);
+    onCharacterUpdate(character.id, { hp: newHp });
+    setDamageAmount('');
   };
+
+  const handlePlayerAddCoins = () => {
+    if (!onCharacterUpdate || !coinsAmount) return;
+    const amount = parseInt(coinsAmount, 10);
+    if (isNaN(amount) || amount <= 0) return;
+    onCharacterUpdate(character.id, { coins: character.coins + amount });
+    setCoinsAmount('');
+  };
+  
+  const handlePlayerRemoveCoins = () => {
+    if (!onCharacterUpdate || !coinsAmount) return;
+    const amount = parseInt(coinsAmount, 10);
+    if (isNaN(amount) || amount <= 0) return;
+    const newCoins = Math.max(0, character.coins - amount);
+    onCharacterUpdate(character.id, { coins: newCoins });
+    setCoinsAmount('');
+  };
+
+  const handleSaveItems = () => {
+    if (onCharacterUpdate) {
+      onCharacterUpdate(character.id, { items: editableItems });
+    }
+    setIsEditingItems(false);
+  };
+
+  const renderClassFeatures = (features?: ClassFeatureSelection[]) => {
+    if (!features || features.length === 0) {
+      return <p className="text-slate-800 dark:text-slate-100">Nenhuma característica de classe específica listada.</p>;
+    }
+    const featuresByLevel: Record<number, ClassFeatureSelection[]> = {};
+    features.forEach(feature => {
+        if (!featuresByLevel[feature.levelAcquired]) {
+            featuresByLevel[feature.levelAcquired] = [];
+        }
+        featuresByLevel[feature.levelAcquired].push(feature);
+    });
+
+    return Object.entries(featuresByLevel)
+      .sort(([levelA], [levelB]) => parseInt(levelA) - parseInt(levelB)) 
+      .map(([level, levelFeatures]) => (
+        <div key={`level-${level}-display`} className="mb-3">
+          <h4 className="text-md font-semibold text-slate-700 dark:text-slate-300">Nível {level}:</h4>
+          <ul className="list-disc list-inside ml-4 space-y-1">
+            {levelFeatures.map(feature => (
+              <li key={feature.featureId} className="text-sm text-slate-800 dark:text-slate-100">
+                <span className="font-medium">{feature.featureName}</span>
+                {feature.type === 'choice' && feature.choiceLabel && (
+                  <span>: <span className="italic">{feature.choiceLabel}</span></span>
+                )}
+                {feature.type === 'asi' && (
+                  <span className="italic"> (Incremento no Valor de Habilidade)</span>
+                )}
+                {feature.description && (feature.type !== 'choice' || !feature.choiceLabel) && ( // Show main description for auto/asi, or if choice has no specific label description
+                    <details className="text-xs text-slate-600 dark:text-slate-400 pl-2 cursor-pointer">
+                        <summary className="hover:text-sky-500 dark:hover:text-sky-400">Ver descrição</summary>
+                        <p className="mt-1 whitespace-pre-wrap text-justify">{feature.description}</p>
+                     </details>
+                )}
+                 {feature.type === 'choice' && feature.choiceLabel && feature.description && (
+                     <details className="text-xs text-slate-600 dark:text-slate-400 pl-2 cursor-pointer">
+                        <summary className="hover:text-sky-500 dark:hover:text-sky-400">Ver descrição da característica</summary>
+                        <p className="mt-1 whitespace-pre-wrap text-justify">{feature.description}</p>
+                     </details>
+                 )}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ));
+  };
+  
+  const renderRacialFeatures = (features?: RacialFeatureSelection[]) => {
+    if (!features || features.length === 0) {
+        return <p className="text-slate-800 dark:text-slate-100">Nenhuma característica racial específica listada.</p>;
+    }
+    return (
+        <ul className="list-disc list-inside ml-4 space-y-1">
+            {features.map(feature => (
+                <li key={feature.featureId} className="text-sm text-slate-800 dark:text-slate-100">
+                    <span className="font-medium">{feature.featureName}</span>
+                    {feature.type === 'choice' && feature.choiceLabel && (
+                        <span>: <span className="italic">{feature.choiceLabel}</span></span>
+                    )}
+                    {feature.description && (
+                        <details className="text-xs text-slate-600 dark:text-slate-400 pl-2 cursor-pointer">
+                            <summary className="hover:text-sky-500 dark:hover:text-sky-400">Ver descrição</summary>
+                            <p className="mt-1 whitespace-pre-wrap text-justify">{feature.description}</p>
+                        </details>
+                    )}
+                </li>
+            ))}
+        </ul>
+    );
+  };
+
 
   return (
     <div className="max-w-4xl mx-auto my-8 p-6 bg-white dark:bg-slate-800 shadow-2xl rounded-lg">
@@ -147,6 +263,7 @@ const CharacterSheetDisplay: React.FC<CharacterSheetDisplayProps> = ({ character
           <InfoItem label="Raça" value={character.race} />
           <InfoItem label="Classe" value={character.charClass} />
           <InfoItem label="Nível" value={character.level} />
+          <InfoItem label="Rank" value={character.rank || RANKS[0]} />
           <InfoItem label="Antecedentes" value={character.background} />
           <InfoItem label="Tendência" value={character.alignment} />
           <InfoItem label="Idade" value={character.age} />
@@ -168,30 +285,44 @@ const CharacterSheetDisplay: React.FC<CharacterSheetDisplayProps> = ({ character
         </div>
       </div>
       
-      {onCharacterUpdate && onBackToList && ( 
-        <Section title="Ações Rápidas">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
-            <div>
+      {onCharacterUpdate && ( 
+        <Section title="Ações do Personagem">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+            <div className="p-3 bg-slate-100 dark:bg-slate-600/50 rounded-md">
               <Input 
                 label="Curar HP" 
                 type="number" 
                 value={healAmount} 
                 onChange={(e) => setHealAmount(e.target.value)}
                 placeholder="Quantidade"
-                id={`heal-${character.id}`}
+                id={`player-heal-${character.id}`}
               />
-              <Button onClick={handleHeal} variant="primary" className="w-full mt-1">Curar</Button>
+              <Button onClick={handlePlayerHeal} variant="primary" className="w-full mt-2">Curar HP</Button>
             </div>
-            <div>
+            <div className="p-3 bg-slate-100 dark:bg-slate-600/50 rounded-md">
               <Input 
-                label="Adicionar Item" 
-                type="text" 
-                value={newItem} 
-                onChange={(e) => setNewItem(e.target.value)}
-                placeholder="Descrição do item"
-                id={`addItem-${character.id}`}
+                label="Sofrer Dano" 
+                type="number" 
+                value={damageAmount} 
+                onChange={(e) => setDamageAmount(e.target.value)}
+                placeholder="Quantidade"
+                id={`player-damage-${character.id}`}
               />
-              <Button onClick={handleAddItem} variant="primary" className="w-full mt-1">Adicionar Item</Button>
+              <Button onClick={handlePlayerTakeDamage} variant="primary" className="w-full mt-2 bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800">Sofrer Dano</Button>
+            </div>
+            <div className="p-3 bg-slate-100 dark:bg-slate-600/50 rounded-md md:col-span-2">
+              <Input 
+                label="Gerenciar Moedas" 
+                type="number" 
+                value={coinsAmount} 
+                onChange={(e) => setCoinsAmount(e.target.value)}
+                placeholder="Quantidade"
+                id={`player-coins-${character.id}`}
+              />
+              <div className="flex space-x-2 mt-2">
+                <Button onClick={handlePlayerAddCoins} variant="secondary" className="w-full">Adicionar Moedas</Button>
+                <Button onClick={handlePlayerRemoveCoins} variant="secondary" className="w-full">Remover Moedas</Button>
+              </div>
             </div>
           </div>
         </Section>
@@ -236,10 +367,42 @@ const CharacterSheetDisplay: React.FC<CharacterSheetDisplayProps> = ({ character
         <p className="text-slate-800 dark:text-slate-100 whitespace-pre-wrap">{character.savingThrows || 'Nenhuma resistência listada.'}</p>
       </Section>
       
-      <Section title="Inventário (Itens)">
-        <p className="text-slate-800 dark:text-slate-100 whitespace-pre-wrap">{character.items || 'Nenhum item listado.'}</p>
+      <Section title="Características Raciais">
+        {renderRacialFeatures(character.racialFeatures)}
       </Section>
-      <Section title="Habilidades da Classe/Raça e Talentos">
+
+      <Section title="Características de Classe">
+        {renderClassFeatures(character.classFeatures)}
+      </Section>
+      
+      <Section 
+        title="Inventário (Itens)"
+        titleActions={onCharacterUpdate && (
+          isEditingItems ? (
+            <div className="flex space-x-2">
+              <Button onClick={handleSaveItems} variant="primary" size="sm" className="text-xs px-2 py-1">Salvar</Button>
+              <Button onClick={() => { setIsEditingItems(false); setEditableItems(character.items); }} variant="secondary" size="sm" className="text-xs px-2 py-1">Cancelar</Button>
+            </div>
+          ) : (
+            <Button onClick={() => setIsEditingItems(true)} variant="secondary" size="sm" className="text-xs px-2 py-1">Editar Inventário</Button>
+          )
+        )}
+      >
+        {isEditingItems && onCharacterUpdate ? (
+          <Textarea
+            label="" 
+            id={`editable-items-${character.id}`}
+            value={editableItems}
+            onChange={(e) => setEditableItems(e.target.value)}
+            rows={5}
+            className="w-full p-2 border border-slate-300 dark:border-slate-600 rounded-md"
+          />
+        ) : (
+          <p className="text-slate-800 dark:text-slate-100 whitespace-pre-wrap">{character.items || 'Nenhum item listado.'}</p>
+        )}
+      </Section>
+
+      <Section title="Habilidades Gerais (Raça/Outros) e Talentos">
         <p className="text-slate-800 dark:text-slate-100 whitespace-pre-wrap">{character.abilities || 'Nenhuma habilidade listada.'}</p>
       </Section>
 
@@ -249,15 +412,15 @@ const CharacterSheetDisplay: React.FC<CharacterSheetDisplayProps> = ({ character
         </Section>
       )}
 
-      {character.fightingStyle && fightingStyleObj && fightingStyleObj.name !== "" && (
+      {fightingStyleName && fightingStyleObj && fightingStyleName !== "" && (
         <Section title="Estilo de Luta">
-          <p className="text-slate-800 dark:text-slate-100 font-semibold">{character.fightingStyle}</p>
+          <p className="text-slate-800 dark:text-slate-100 font-semibold">{fightingStyleName}</p>
           {fightingStyleObj.description && (
             <p className="text-sm text-slate-600 dark:text-slate-400 mt-1 whitespace-pre-wrap text-justify">{fightingStyleObj.description}</p>
           )}
         </Section>
       )}
-       {character.fightingStyle === "" && fightingStyleObj && ( 
+       {(!fightingStyleName || fightingStyleName === "") && ( 
          <Section title="Estilo de Luta">
             <p className="text-slate-800 dark:text-slate-100">Nenhum</p>
          </Section>
