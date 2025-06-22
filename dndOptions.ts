@@ -44,7 +44,6 @@ export const FIGHTING_STYLE_OPTIONS: FightingStyleOption[] = [
   { name: "Proteção", description: "Quando uma criatura que você pode ver atacar um alvo que não seja você e esteja a até 1,5 metro de você, você pode usar sua reação para impor desvantagem na jogada de ataque. Você deve estar empunhando um escudo." }
 ];
 
-// This derived array can be used for select options if only names are needed for the value.
 export const FIGHTING_STYLES: string[] = FIGHTING_STYLE_OPTIONS.map(fs => fs.name);
 
 
@@ -55,12 +54,12 @@ export const CLASS_SPELLCASTING_ABILITIES: Record<string, AttributeName | undefi
   "Feiticeiro": "charisma",
   "Bardo": "charisma",
   "Bruxo": "charisma",
-  "Paladino": "charisma", // Paladinos usam Carisma
-  "Patrulheiro": "wisdom", // Patrulheiros usam Sabedoria
+  "Paladino": "charisma", 
+  "Patrulheiro": "wisdom", 
   "Bárbaro": undefined,
-  "Guerreiro": undefined,
-  "Ladino": undefined,
-  "Monge": undefined,
+  "Guerreiro": "intelligence", // For Eldritch Knight
+  "Ladino": "intelligence",    // For Arcane Trickster
+  "Monge": "wisdom", // For Way of Four Elements
 };
 
-export const RANKS = [...RANK_OPTIONS]; // Export a copy of RANKS from types.ts
+export const RANKS = [...RANK_OPTIONS];

@@ -1,9 +1,8 @@
 
-
 // Helper: Spell slot progression tables (condensed for brevity)
 // Each inner array is [L1, L2, L3, L4, L5, L6, L7, L8, L9] slots
 const CLASS_SPELL_SLOTS: Record<string, number[][]> = {
-  "Bardo": [ // Full Caster
+  "Bardo": [ 
     /* 1*/ [2,0,0,0,0,0,0,0,0], /* 2*/ [3,0,0,0,0,0,0,0,0], /* 3*/ [4,2,0,0,0,0,0,0,0],
     /* 4*/ [4,3,0,0,0,0,0,0,0], /* 5*/ [4,3,2,0,0,0,0,0,0], /* 6*/ [4,3,3,0,0,0,0,0,0],
     /* 7*/ [4,3,3,1,0,0,0,0,0], /* 8*/ [4,3,3,2,0,0,0,0,0], /* 9*/ [4,3,3,3,1,0,0,0,0],
@@ -12,94 +11,107 @@ const CLASS_SPELL_SLOTS: Record<string, number[][]> = {
     /*16*/ [4,3,3,3,2,1,1,1,0], /*17*/ [4,3,3,3,2,1,1,1,1], /*18*/ [4,3,3,3,3,1,1,1,1],
     /*19*/ [4,3,3,3,3,2,1,1,1], /*20*/ [4,3,3,3,3,2,2,1,1],
   ],
-  "Clérigo": [ // Full Caster
+  "Clérigo": [ 
     [2,0,0,0,0,0,0,0,0], [3,0,0,0,0,0,0,0,0], [4,2,0,0,0,0,0,0,0], [4,3,0,0,0,0,0,0,0],
     [4,3,2,0,0,0,0,0,0], [4,3,3,0,0,0,0,0,0], [4,3,3,1,0,0,0,0,0], [4,3,3,2,0,0,0,0,0],
     [4,3,3,3,1,0,0,0,0], [4,3,3,3,2,0,0,0,0], [4,3,3,3,2,1,0,0,0], [4,3,3,3,2,1,0,0,0],
     [4,3,3,3,2,1,1,0,0], [4,3,3,3,2,1,1,0,0], [4,3,3,3,2,1,1,1,0], [4,3,3,3,2,1,1,1,0],
     [4,3,3,3,2,1,1,1,1], [4,3,3,3,3,1,1,1,1], [4,3,3,3,3,2,1,1,1], [4,3,3,3,3,2,2,1,1],
   ],
-  "Druida": [ // Full Caster
+  "Druida": [ 
     [2,0,0,0,0,0,0,0,0], [3,0,0,0,0,0,0,0,0], [4,2,0,0,0,0,0,0,0], [4,3,0,0,0,0,0,0,0],
     [4,3,2,0,0,0,0,0,0], [4,3,3,0,0,0,0,0,0], [4,3,3,1,0,0,0,0,0], [4,3,3,2,0,0,0,0,0],
     [4,3,3,3,1,0,0,0,0], [4,3,3,3,2,0,0,0,0], [4,3,3,3,2,1,0,0,0], [4,3,3,3,2,1,0,0,0],
     [4,3,3,3,2,1,1,0,0], [4,3,3,3,2,1,1,0,0], [4,3,3,3,2,1,1,1,0], [4,3,3,3,2,1,1,1,0],
     [4,3,3,3,2,1,1,1,1], [4,3,3,3,3,1,1,1,1], [4,3,3,3,3,2,1,1,1], [4,3,3,3,3,2,2,1,1],
   ],
-  "Mago": [ // Full Caster
+  "Mago": [ 
     [2,0,0,0,0,0,0,0,0], [3,0,0,0,0,0,0,0,0], [4,2,0,0,0,0,0,0,0], [4,3,0,0,0,0,0,0,0],
     [4,3,2,0,0,0,0,0,0], [4,3,3,0,0,0,0,0,0], [4,3,3,1,0,0,0,0,0], [4,3,3,2,0,0,0,0,0],
     [4,3,3,3,1,0,0,0,0], [4,3,3,3,2,0,0,0,0], [4,3,3,3,2,1,0,0,0], [4,3,3,3,2,1,0,0,0],
     [4,3,3,3,2,1,1,0,0], [4,3,3,3,2,1,1,0,0], [4,3,3,3,2,1,1,1,0], [4,3,3,3,2,1,1,1,0],
     [4,3,3,3,2,1,1,1,1], [4,3,3,3,3,1,1,1,1], [4,3,3,3,3,2,1,1,1], [4,3,3,3,3,2,2,1,1],
   ],
-  "Feiticeiro": [ // Full Caster
+  "Feiticeiro": [ 
     [2,0,0,0,0,0,0,0,0], [3,0,0,0,0,0,0,0,0], [4,2,0,0,0,0,0,0,0], [4,3,0,0,0,0,0,0,0],
     [4,3,2,0,0,0,0,0,0], [4,3,3,0,0,0,0,0,0], [4,3,3,1,0,0,0,0,0], [4,3,3,2,0,0,0,0,0],
     [4,3,3,3,1,0,0,0,0], [4,3,3,3,2,0,0,0,0], [4,3,3,3,2,1,0,0,0], [4,3,3,3,2,1,0,0,0],
     [4,3,3,3,2,1,1,0,0], [4,3,3,3,2,1,1,0,0], [4,3,3,3,2,1,1,1,0], [4,3,3,3,2,1,1,1,0],
     [4,3,3,3,2,1,1,1,1], [4,3,3,3,3,1,1,1,1], [4,3,3,3,3,2,1,1,1], [4,3,3,3,3,2,2,1,1],
   ],
-  "Paladino": [ // Half Caster (starts at level 2)
-    /* 1*/ [0,0,0,0,0,0,0,0,0], /* 2*/ [2,0,0,0,0,0,0,0,0], /* 3*/ [3,0,0,0,0,0,0,0,0],
-    /* 4*/ [3,0,0,0,0,0,0,0,0], /* 5*/ [4,2,0,0,0,0,0,0,0], /* 6*/ [4,2,0,0,0,0,0,0,0],
-    /* 7*/ [4,3,0,0,0,0,0,0,0], /* 8*/ [4,3,0,0,0,0,0,0,0], /* 9*/ [4,3,2,0,0,0,0,0,0],
-    /*10*/ [4,3,2,0,0,0,0,0,0], /*11*/ [4,3,3,0,0,0,0,0,0], /*12*/ [4,3,3,0,0,0,0,0,0],
-    /*13*/ [4,3,3,1,0,0,0,0,0], /*14*/ [4,3,3,1,0,0,0,0,0], /*15*/ [4,3,3,2,0,0,0,0,0],
-    /*16*/ [4,3,3,2,0,0,0,0,0], /*17*/ [4,3,3,3,1,0,0,0,0], /*18*/ [4,3,3,3,1,0,0,0,0],
-    /*19*/ [4,3,3,3,2,0,0,0,0], /*20*/ [4,3,3,3,2,0,0,0,0],
-  ],
-  "Patrulheiro": [ // Half Caster (starts at level 2)
-    [0,0,0,0,0,0,0,0,0], [2,0,0,0,0,0,0,0,0], [3,0,0,0,0,0,0,0,0], [3,0,0,0,0,0,0,0,0],
-    [4,2,0,0,0,0,0,0,0], [4,2,0,0,0,0,0,0,0], [4,3,0,0,0,0,0,0,0], [4,3,0,0,0,0,0,0,0],
-    [4,3,2,0,0,0,0,0,0], [4,3,2,0,0,0,0,0,0], [4,3,3,0,0,0,0,0,0], [4,3,3,0,0,0,0,0,0],
-    [4,3,3,1,0,0,0,0,0], [4,3,3,1,0,0,0,0,0], [4,3,3,2,0,0,0,0,0], [4,3,3,2,0,0,0,0,0],
-    [4,3,3,3,1,0,0,0,0], [4,3,3,3,1,0,0,0,0], [4,3,3,3,2,0,0,0,0], [4,3,3,3,2,0,0,0,0],
-  ],
-  "Bruxo": [ // Pact Magic - different progression, slots are same level
-    // Slots per short rest, Slot Level
-    // For simplicity, we'll represent total "spell power" via the main 9-level slot array,
-    // though this isn't how it's usually displayed. This table will show number of slots,
-    // and a separate function will give their level.
-    // Lvl: NumSlots, SlotLevel
-    // 1:   1, 1st
-    // 2:   2, 1st
-    // 3:   2, 2nd
-    // ...
-    // This simplified model will use the common 9-slot array for consistency with other casters in the UI
-    // but the actual Warlock slots are fewer and recover on short rest.
-    // For now, a simplified full-caster like progression for Bruxo to make it work, needs refinement for true Pact Magic.
-    // TEMPORARY: Using Sorcerer slots for Bruxo for UI consistency. This needs specific Bruxo logic.
-        [2,0,0,0,0,0,0,0,0], [3,0,0,0,0,0,0,0,0], [4,2,0,0,0,0,0,0,0], [4,3,0,0,0,0,0,0,0],
-    [4,3,2,0,0,0,0,0,0], [4,3,3,0,0,0,0,0,0], [4,3,3,1,0,0,0,0,0], [4,3,3,2,0,0,0,0,0],
-    [4,3,3,3,1,0,0,0,0], [4,3,3,3,2,0,0,0,0], // Up to 5th level slots only for Pact Magic
-    [4,3,3,3,2,1,0,0,0], [4,3,3,3,2,1,0,0,0], // Mystic Arcanum starts here (6th+)
-    [4,3,3,3,2,1,1,0,0], [4,3,3,3,2,1,1,0,0],
-    [4,3,3,3,2,1,1,1,0], [4,3,3,3,2,1,1,1,0],
-    [4,3,3,3,2,1,1,1,1], [4,3,3,3,3,1,1,1,1], // Simplified
-    [4,3,3,3,3,2,1,1,1], [4,3,3,3,3,2,2,1,1],
-  ],
-  // Non-casters or those with very different systems omitted for now (Bárbaro, Guerreiro, Ladino, Monge)
+  "Paladino": [ 
+    /* 1*/ [0,0,0,0,0], /* 2*/ [2,0,0,0,0], /* 3*/ [3,0,0,0,0], /* 4*/ [3,0,0,0,0],
+    /* 5*/ [4,2,0,0,0], /* 6*/ [4,2,0,0,0], /* 7*/ [4,3,0,0,0], /* 8*/ [4,3,0,0,0],
+    /* 9*/ [4,3,2,0,0], /*10*/ [4,3,2,0,0], /*11*/ [4,3,3,0,0], /*12*/ [4,3,3,0,0],
+    /*13*/ [4,3,3,1,0], /*14*/ [4,3,3,1,0], /*15*/ [4,3,3,2,0], /*16*/ [4,3,3,2,0],
+    /*17*/ [4,3,3,3,1], /*18*/ [4,3,3,3,1], /*19*/ [4,3,3,3,2], /*20*/ [4,3,3,3,2],
+  ].map(arr => [...arr, 0,0,0,0]), // Pad to 9 levels
+  "Patrulheiro": [ 
+    [0,0,0,0,0], [2,0,0,0,0], [3,0,0,0,0], [3,0,0,0,0],
+    [4,2,0,0,0], [4,2,0,0,0], [4,3,0,0,0], [4,3,0,0,0],
+    [4,3,2,0,0], [4,3,2,0,0], [4,3,3,0,0], [4,3,3,0,0],
+    [4,3,3,1,0], [4,3,3,1,0], [4,3,3,2,0], [4,3,3,2,0],
+    [4,3,3,3,1], [4,3,3,3,1], [4,3,3,3,2], [4,3,3,3,2],
+  ].map(arr => [...arr, 0,0,0,0]), // Pad to 9 levels
+  "Bruxo": [ // Warlock Pact Magic slots. The table indicates number of slots and the level of those slots.
+    // Level | Slots | Slot Level (This is simplified here, actual slot level comes from a different table)
+    /* 1*/ [1,0,0,0,0], /* 2*/ [2,0,0,0,0], /* 3*/ [2,0,0,0,0], /* 4*/ [2,0,0,0,0],
+    /* 5*/ [2,0,0,0,0], /* 6*/ [2,0,0,0,0], /* 7*/ [2,0,0,0,0], /* 8*/ [2,0,0,0,0],
+    /* 9*/ [2,0,0,0,0], /*10*/ [2,0,0,0,0], /*11*/ [3,0,0,0,0], /*12*/ [3,0,0,0,0],
+    /*13*/ [3,0,0,0,0], /*14*/ [3,0,0,0,0], /*15*/ [3,0,0,0,0], /*16*/ [3,0,0,0,0],
+    /*17*/ [4,0,0,0,0], /*18*/ [4,0,0,0,0], /*19*/ [4,0,0,0,0], /*20*/ [4,0,0,0,0],
+  ].map(arr => [...arr,0,0,0,0]), // Only pact slots up to 5th level. Mystic Arcanum separate.
+  "Guerreiro": [ // Eldritch Knight - 1/3 caster
+    /* 1-2 */ [0,0,0,0], [0,0,0,0],
+    /* 3 */   [2,0,0,0], /* 4 */ [3,0,0,0], /* 5 */ [3,0,0,0], /* 6 */ [3,0,0,0],
+    /* 7 */   [4,2,0,0], /* 8 */ [4,2,0,0], /* 9 */ [4,2,0,0], /* 10*/ [4,3,0,0],
+    /* 11*/   [4,3,0,0], /* 12*/ [4,3,0,0], /* 13*/ [4,3,2,0], /* 14*/ [4,3,2,0],
+    /* 15*/   [4,3,2,0], /* 16*/ [4,3,3,0], /* 17*/ [4,3,3,0], /* 18*/ [4,3,3,0],
+    /* 19*/   [4,3,3,1], /* 20*/ [4,3,3,1]
+  ].map(arr => [...arr,0,0,0,0,0]), // Pad to 9 levels
+  "Ladino": [ // Arcane Trickster - 1/3 caster
+    /* 1-2 */ [0,0,0,0], [0,0,0,0],
+    /* 3 */   [2,0,0,0], /* 4 */ [3,0,0,0], /* 5 */ [3,0,0,0], /* 6 */ [3,0,0,0],
+    /* 7 */   [4,2,0,0], /* 8 */ [4,2,0,0], /* 9 */ [4,2,0,0], /* 10*/ [4,3,0,0],
+    /* 11*/   [4,3,0,0], /* 12*/ [4,3,0,0], /* 13*/ [4,3,2,0], /* 14*/ [4,3,2,0],
+    /* 15*/   [4,3,2,0], /* 16*/ [4,3,3,0], /* 17*/ [4,3,3,0], /* 18*/ [4,3,3,0],
+    /* 19*/   [4,3,3,1], /* 20*/ [4,3,3,1]
+  ].map(arr => [...arr,0,0,0,0,0]), // Pad to 9 levels
 };
+
+const WARLOCK_PACT_SLOT_LEVEL = [
+  /* 1*/ 1, /* 2*/ 1, /* 3*/ 2, /* 4*/ 2, /* 5*/ 3, /* 6*/ 3, /* 7*/ 4, /* 8*/ 4, /* 9*/ 5,
+  /*10*/ 5, /*11*/ 5, /*12*/ 5, /*13*/ 5, /*14*/ 5, /*15*/ 5, /*16*/ 5, /*17*/ 5, /*18*/ 5,
+  /*19*/ 5, /*20*/ 5
+];
 
 export const getClassSpellSlots = (className: string, level: number): number[] => {
-  const classSlots = CLASS_SPELL_SLOTS[className];
-  if (classSlots && level >= 1 && level <= classSlots.length) {
-    return classSlots[level - 1];
+  const classSlotsProgression = CLASS_SPELL_SLOTS[className];
+  if (classSlotsProgression && level >= 1 && level <= classSlotsProgression.length) {
+    if (className === "Bruxo") {
+        const numPactSlots = classSlotsProgression[level - 1][0]; // Number of pact slots is in the first element for Warlock
+        const pactSlotLevel = WARLOCK_PACT_SLOT_LEVEL[level -1];
+        
+        const slotsArray = Array(9).fill(0);
+        if (pactSlotLevel > 0 && pactSlotLevel <=5) {
+            slotsArray[pactSlotLevel -1] = numPactSlots;
+        }
+        return slotsArray;
+    }
+    return classSlotsProgression[level - 1];
   }
-  return Array(9).fill(0); // Default for non-casters or unlisted levels
+  return Array(9).fill(0); 
 };
 
-// Cantrips Known
 const CLASS_CANTRIPS_KNOWN: Record<string, number[]> = {
-  // Index is level - 1, value is cantrips known
   "Mago":       [3,3,3,4,4,4,4,4,4,5,5,5,5,5,5,5,5,5,5,5],
   "Feiticeiro": [4,4,4,5,5,5,5,5,5,6,6,6,6,6,6,6,6,6,6,6],
   "Bardo":      [2,2,2,3,3,3,3,3,3,4,4,4,4,4,4,4,4,4,4,4],
   "Clérigo":    [3,3,3,4,4,4,4,4,4,5,5,5,5,5,5,5,5,5,5,5],
   "Druida":     [2,2,2,3,3,3,3,3,3,4,4,4,4,4,4,4,4,4,4,4],
-  "Bruxo":      [2,2,2,3,3,3,3,3,3,4,4,4,4,4,4,4,4,4,4,4], // Base Warlock
-  // Paladino and Patrulheiro typically don't get cantrips unless via Fighting Style/subclass
+  "Bruxo":      [2,2,2,3,3,3,3,3,3,4,4,4,4,4,4,4,4,4,4,4], 
+  "Guerreiro":  [0,0,2,2,2,2,2,2,2,3,3,3,3,3,3,3,3,3,3,3], // Eldritch Knight
+  "Ladino":     [0,0,2,2,2,2,2,2,2,3,3,3,3,3,3,3,3,3,3,3], // Arcane Trickster
 };
 
 export const getClassCantripsKnownCount = (className: string, level: number): number => {
@@ -110,10 +122,7 @@ export const getClassCantripsKnownCount = (className: string, level: number): nu
   return 0;
 };
 
-
-// Spells Known (for classes like Bard, Ranger, Sorcerer)
 const CLASS_SPELLS_KNOWN: Record<string, number[]> = {
-    // Index is level - 1
     "Bardo": [
       /* 1*/ 4, /* 2*/ 5, /* 3*/ 6, /* 4*/ 7, /* 5*/ 8, /* 6*/ 9, /* 7*/ 10, /* 8*/ 11, /* 9*/ 12,
       /*10*/ 14, /*11*/ 15, /*12*/ 15, /*13*/ 16, /*14*/ 18, /*15*/ 19, /*16*/ 19, /*17*/ 20,
@@ -129,12 +138,20 @@ const CLASS_SPELLS_KNOWN: Record<string, number[]> = {
       /* 9*/ 6,  /*10*/ 6,  /*11*/ 7,  /*12*/ 7,  /*13*/ 8,  /*14*/ 8,  /*15*/ 9,  /*16*/ 9,
       /*17*/ 10, /*18*/ 10, /*19*/ 11, /*20*/ 11
     ],
-    // Wizard, Cleric, Druid, Paladin prepare spells, so they "know" their whole list.
-    // Bruxo has a limited number of spells known, similar to Sorcerer.
-    "Bruxo": [ // Spells Known (not including Mystic Arcanum)
+    "Bruxo": [ 
       /* 1*/ 2, /* 2*/ 3, /* 3*/ 4, /* 4*/ 5, /* 5*/ 6, /* 6*/ 7, /* 7*/ 8, /* 8*/ 9, /* 9*/ 10,
       /*10*/ 10, /*11*/ 11, /*12*/ 11, /*13*/ 12, /*14*/ 12, /*15*/ 13, /*16*/ 13, /*17*/ 14,
       /*18*/ 14, /*19*/ 15, /*20*/ 15
+    ],
+    "Guerreiro": [ // Eldritch Knight
+      /* 1-2 */ 0,0, /* 3 */ 3, /* 4 */ 4, /* 5 */ 4, /* 6 */ 4, /* 7 */ 5, /* 8 */ 6, /* 9 */ 6,
+      /* 10*/ 7, /* 11*/ 8, /* 12*/ 8, /* 13*/ 9, /* 14*/ 10, /* 15*/ 10, /* 16*/ 11, /* 17*/ 11,
+      /* 18*/ 11, /* 19*/ 12, /* 20*/ 13
+    ],
+    "Ladino": [ // Arcane Trickster
+       /* 1-2 */ 0,0, /* 3 */ 3, /* 4 */ 4, /* 5 */ 4, /* 6 */ 4, /* 7 */ 5, /* 8 */ 6, /* 9 */ 6,
+      /* 10*/ 7, /* 11*/ 8, /* 12*/ 8, /* 13*/ 9, /* 14*/ 10, /* 15*/ 10, /* 16*/ 11, /* 17*/ 11,
+      /* 18*/ 11, /* 19*/ 12, /* 20*/ 13
     ]
 };
 
@@ -143,30 +160,29 @@ export const getClassSpellsKnownCount = (className: string, level: number): numb
     if (spellsKnownList && level >= 1 && level <= spellsKnownList.length) {
         return spellsKnownList[level-1];
     }
-    // For classes that prepare from their full list (Cleric, Druid, Paladin, Wizard),
-    // they "know" all spells on their list up to the max spell level they can cast.
-    // This function is primarily for casters with a fixed number of known spells.
-    // For preparers, the UI might show all available spells and let them tick off prepared ones.
-    if (["Clérigo", "Druida", "Mago", "Paladino"].includes(className)) return Infinity; // Indicates they prepare from list
+    if (["Clérigo", "Druida", "Mago", "Paladino"].includes(className)) return Infinity; // These classes prepare spells, so "known" is effectively their entire list
     return 0;
 }
 
-// Max spell level a class can cast/prepare
 const MAX_SPELL_LEVEL_BY_CLASS_LEVEL: Record<string, number[]> = {
-    // Index is level - 1, value is max spell level (1-9)
     "Bardo":      [1,1,2,2,3,3,4,4,5,5,6,6,7,7,8,8,9,9,9,9],
     "Clérigo":    [1,1,2,2,3,3,4,4,5,5,6,6,7,7,8,8,9,9,9,9],
     "Druida":     [1,1,2,2,3,3,4,4,5,5,6,6,7,7,8,8,9,9,9,9],
     "Mago":       [1,1,2,2,3,3,4,4,5,5,6,6,7,7,8,8,9,9,9,9],
     "Feiticeiro": [1,1,2,2,3,3,4,4,5,5,6,6,7,7,8,8,9,9,9,9],
-    "Paladino":   [0,1,1,1,2,2,3,3,4,4,5,5,5,5,5,5,5,5,5,5], // Starts L2
-    "Patrulheiro":[0,1,1,1,2,2,3,3,4,4,5,5,5,5,5,5,5,5,5,5], // Starts L2
-    "Bruxo":      [1,1,2,2,3,3,4,4,5,5,5,5,5,5,5,5,5,5,5,5], // Pact slots max out at 5th; Mystic Arcanum for 6-9
+    "Paladino":   [0,1,1,1,2,2,3,3,4,4,5,5,5,5,5,5,5,5,5,5], 
+    "Patrulheiro":[0,1,1,1,2,2,3,3,4,4,5,5,5,5,5,5,5,5,5,5], 
+    "Bruxo":      [1,1,2,2,3,3,4,4,5,5,5,5,5,5,5,5,5,5,5,5], // Pact Magic slot level
+    "Guerreiro":  [0,0,1,1,1,1,2,2,2,2,2,2,3,3,3,3,3,3,4,4], // Eldritch Knight max spell level
+    "Ladino":     [0,0,1,1,1,1,2,2,2,2,2,2,3,3,3,3,3,3,4,4], // Arcane Trickster max spell level
 };
 
 export const getClassMaxSpellLevel = (className: string, level: number): number => {
     const maxLevelList = MAX_SPELL_LEVEL_BY_CLASS_LEVEL[className];
     if (maxLevelList && level >=1 && level <= maxLevelList.length) {
+        if (className === "Bruxo") { 
+            return WARLOCK_PACT_SLOT_LEVEL[level - 1];
+        }
         return maxLevelList[level-1];
     }
     return 0;
@@ -177,11 +193,9 @@ export const getWizardCantripsKnown = (level: number): number => {
 };
 
 export const getWizardLevel1SpellsForSpellbook = (): number => {
-  return 6; // Wizards start with 6 1st-level spells in their spellbook
+  return 6; 
 };
 
-// getWizardSpellSlots is now replaced by getClassSpellSlots("Mago", level)
-// This function can be removed or kept for backward compatibility if it's used elsewhere explicitly.
 export const getWizardSpellSlots = (level: number): number[] => {
   return getClassSpellSlots("Mago", level);
 };

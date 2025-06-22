@@ -12,126 +12,6 @@ import * as supabaseService from './supabaseService';
 import { ALL_CLASS_FEATURES_MAP } from './classFeaturesData';
 import { ALL_RACIAL_FEATURES_MAP } from './racialFeaturesData';
 
-const TEST_CHARACTER_ID = "test-pavel-exemplo-001";
-
-// Helper to generate initial class features for Pavel (now a Mage)
-const getInitialPavelClassFeatures = (level: number): ClassFeatureSelection[] => {
-  const pavelFeatures: ClassFeatureSelection[] = [];
-  const mageDefs = ALL_CLASS_FEATURES_MAP["Mago"] || [];
-
-  if (level >= 1) {
-    const spellcastingDef = mageDefs.find(f => f.id === "wizard_spellcasting");
-    if (spellcastingDef) {
-      pavelFeatures.push({
-        featureId: spellcastingDef.id,
-        featureName: spellcastingDef.name,
-        levelAcquired: spellcastingDef.level,
-        type: spellcastingDef.type,
-        description: spellcastingDef.description,
-      });
-    }
-    const arcaneRecoveryDef = mageDefs.find(f => f.id === "wizard_arcane_recovery");
-    if (arcaneRecoveryDef) {
-      pavelFeatures.push({
-        featureId: arcaneRecoveryDef.id,
-        featureName: arcaneRecoveryDef.name,
-        levelAcquired: arcaneRecoveryDef.level,
-        type: arcaneRecoveryDef.type,
-        description: arcaneRecoveryDef.description,
-      });
-    }
-  }
-  if (level >= 2) {
-    const arcaneTraditionDef = mageDefs.find(f => f.id === "wizard_arcane_tradition");
-    if (arcaneTraditionDef) {
-       pavelFeatures.push({
-        featureId: arcaneTraditionDef.id,
-        featureName: arcaneTraditionDef.name,
-        levelAcquired: arcaneTraditionDef.level,
-        type: arcaneTraditionDef.type,
-        choiceValue: "evocation", // Pavel's choice: Evocation
-        choiceLabel: "Escola de Evocação",
-        description: arcaneTraditionDef.description,
-      });
-    }
-     const traditionFeature2Def = mageDefs.find(f => f.id === "wizard_tradition_feature_2");
-    if (traditionFeature2Def) {
-       pavelFeatures.push({
-        featureId: traditionFeature2Def.id,
-        featureName: traditionFeature2Def.name, // Will be generic, actual name depends on tradition
-        levelAcquired: traditionFeature2Def.level,
-        type: traditionFeature2Def.type,
-        description: traditionFeature2Def.description, // Generic description
-      });
-    }
-  }
-  // Add more for level 3 if any auto/ASI
-  return pavelFeatures;
-};
-
-// Helper to generate initial racial features for Pavel (Hill Dwarf)
-const getInitialPavelRacialFeatures = (): RacialFeatureSelection[] => {
-    const pavelRacialFeatures: RacialFeatureSelection[] = [];
-    const hillDwarfDefs = ALL_RACIAL_FEATURES_MAP["Anão da Colina"] || [];
-
-    hillDwarfDefs.forEach(def => {
-        if (def.type === 'auto') {
-            pavelRacialFeatures.push({
-                featureId: def.id,
-                featureName: def.name,
-                type: def.type,
-                description: def.description,
-            });
-        }
-        // No default choices for Hill Dwarf in this basic setup
-    });
-    return pavelRacialFeatures;
-};
-
-
-const initialCharacterData: Character = {
-  id: TEST_CHARACTER_ID,
-  photoUrl: 'https://picsum.photos/300/400?grayscale&blur=2',
-  name: 'Pavel Stonebeard', 
-  background: BACKGROUNDS[11], // Sábio
-  race: RACES[0], // Anão da Colina
-  charClass: CLASSES[8], // Mago
-  age: 45,
-  alignment: ALIGNMENTS[3], // Leal e Neutro
-  coins: 75,
-  level: 3, 
-  // Hill Dwarf: +1 HP per level. Base HP for Mage (CON 14 = +2) is 6 + 2 = 8. Level 3: 8 + (4+2)*2 = 8 + 12 = 20. Plus 3 from Dwarven Toughness = 23
-  hp: 23, 
-  hpt: 23,
-  ac: 11, // Base 10 + DEX 11 (+0) -> Assuming no armor or Mage Armor up
-  attributes: { // Human base + Hill Dwarf (+2 CON, +1 WIS) + ASI example
-    strength: 10,
-    dexterity: 11, // DEX was 15, changing for Mage concept, set to 11
-    constitution: 14, // Base 10 -> 12 (Dwarf) -> 14 (Example Point Buy)
-    intelligence: 16, // Mage primary
-    wisdom: 12,      // Base 10 -> 11 (Dwarf) -> 12 (Example Point Buy)
-    charisma: 8,
-  },
-  proficientSkills: ['arcana', 'history', 'investigation', 'perception'], // Perception from Keen Senses (if High Elf, for example)
-  skillNotes: 'Conhecimentos de um estudioso anão.',
-  items: 'Grimório, cajado, bolsa de componentes, pacote de estudioso.',
-  savingThrows: 'INT +5, WIS +3 (Proficiency bonus for L3 is +2. INT Save: 16 INT = +3 mod; +2 prof = +5. WIS Save: 12 WIS = +1 mod; +2 prof = +3)',
-  abilities: 'Visão no Escuro, Resiliência Anã, Treinamento Anão em Combate, Afinidade com Rochas, Robustez Anã.',
-  fightingStyle: "", // Mages don't typically have fighting styles
-  magic: {
-    spellcastingAbilityName: 'intelligence' as AttributeName,
-    spellSaveDC: 13, // 8 + 2 (prof) + 3 (INT mod 16)
-    spellAttackBonus: 5, // 2 (prof) + 3 (INT mod 16)
-    cantripsKnown: ["Rajada de Fogo (Fire Bolt)", "Luz (Light)", "Mãos Mágicas (Mage Hand)"], 
-    spellsKnownPrepared: ["Mísseis Mágicos (Magic Missile)", "Escudo Arcano (Shield)", "Sono (Sleep)", "Detectar Magia (Detect Magic)"], 
-    spellbook: ["Mísseis Mágicos (Magic Missile)", "Escudo Arcano (Shield)", "Sono (Sleep)", "Detectar Magia (Detect Magic)", "Área Escorregadia (Grease)", "Alarme (Alarm)"],
-    spellSlots: [4,2,0,0,0,0,0,0,0], // Mage L3 slots
-  },
-  classFeatures: getInitialPavelClassFeatures(3),
-  racialFeatures: getInitialPavelRacialFeatures(),
-  rank: RANKS[2], // Pavel is Prata
-};
-
 const LOCAL_STORAGE_ROLE_KEY = 'dndUserRole';
 const LOCAL_STORAGE_VIEWING_CHARACTER_ID_KEY = 'dndAppViewingCharacterId';
 const LOCAL_STORAGE_ACTIVE_SCREEN_KEY = 'dndAppActiveScreen';
@@ -163,57 +43,34 @@ const App: React.FC = () => {
       const savedActiveScreen = localStorage.getItem(LOCAL_STORAGE_ACTIVE_SCREEN_KEY) as Screen | null;
 
       let fetchedCharacters = await supabaseService.getCharacters();
-
-      const testCharExists = fetchedCharacters.some(c => c.id === TEST_CHARACTER_ID);
-      if (!testCharExists) {
-        console.log("Test character Pavel not found in Supabase, attempting to add it.");
-        const pavelWithDetails = { 
-            ...initialCharacterData, 
-            classFeatures: getInitialPavelClassFeatures(initialCharacterData.level),
-            racialFeatures: getInitialPavelRacialFeatures(),
-            rank: initialCharacterData.rank || RANKS[0] 
-        };
-        const addedTestChar = await supabaseService.saveCharacter(pavelWithDetails);
-        if (addedTestChar) {
-          fetchedCharacters.push(addedTestChar);
-        } else {
-          console.warn("Failed to add test character Pavel to Supabase.");
+      
+      // Ensure all characters from DB have necessary default fields if missing
+      fetchedCharacters = fetchedCharacters.map(c => {
+        let updatedChar = { ...c };
+        if (!updatedChar.rank) updatedChar.rank = RANKS[0];
+        if (!updatedChar.classFeatures) updatedChar.classFeatures = [];
+        if (!updatedChar.racialFeatures) updatedChar.racialFeatures = [];
+        // Ensure magic object and its sub-arrays exist if magic is defined
+        if (updatedChar.magic) {
+            updatedChar.magic.cantripsKnown = updatedChar.magic.cantripsKnown || [];
+            updatedChar.magic.spellsKnownPrepared = updatedChar.magic.spellsKnownPrepared || [];
+            updatedChar.magic.spellbook = updatedChar.magic.spellbook || [];
+            updatedChar.magic.spellSlots = updatedChar.magic.spellSlots && updatedChar.magic.spellSlots.length === 9 
+                                            ? updatedChar.magic.spellSlots 
+                                            : Array(9).fill(0);
+        } else { // If magic object itself is missing
+            updatedChar.magic = {
+                spellcastingAbilityName: undefined,
+                spellSaveDC: 0,
+                spellAttackBonus: 0,
+                cantripsKnown: [],
+                spellsKnownPrepared: [],
+                spellbook: [],
+                spellSlots: Array(9).fill(0),
+            };
         }
-      } else { 
-        fetchedCharacters = fetchedCharacters.map(c => {
-          let updatedChar = { ...c };
-          if (c.id === TEST_CHARACTER_ID) { // Ensure Pavel from DB has necessary fields
-            if (!c.classFeatures || c.classFeatures.length === 0 || c.charClass !== initialCharacterData.charClass) {
-              console.log("Updating Pavel from DB with initial class features (Mage L3).");
-              updatedChar.classFeatures = getInitialPavelClassFeatures(initialCharacterData.level);
-            }
-            if (!c.racialFeatures || c.racialFeatures.length === 0 || c.race !== initialCharacterData.race) {
-              console.log("Updating Pavel from DB with initial racial features (Hill Dwarf).");
-              updatedChar.racialFeatures = getInitialPavelRacialFeatures();
-            }
-            if (!c.rank) {
-              updatedChar.rank = initialCharacterData.rank || RANKS[0];
-            }
-            // Overwrite Pavel's stats to match new design if different
-            if (c.charClass !== initialCharacterData.charClass || c.race !== initialCharacterData.race || c.level !== initialCharacterData.level) {
-                console.log("Pavel's core stats (class/race/level) from DB differ from new design. Overwriting with new design's example data.");
-                updatedChar = {
-                    ...updatedChar, // Keep ID and Supabase specific fields
-                    ...initialCharacterData, // Apply new design stats
-                    id: c.id, // Retain original ID
-                    classFeatures: getInitialPavelClassFeatures(initialCharacterData.level),
-                    racialFeatures: getInitialPavelRacialFeatures(),
-                };
-            }
-          }
-          // Ensure all characters have default fields if missing
-          if (!updatedChar.rank) updatedChar.rank = RANKS[0];
-          if (!updatedChar.classFeatures) updatedChar.classFeatures = [];
-          if (!updatedChar.racialFeatures) updatedChar.racialFeatures = [];
-          
-          return updatedChar;
-        });
-      }
+        return updatedChar;
+      });
       
       setCharacters(fetchedCharacters);
 
@@ -227,6 +84,7 @@ const App: React.FC = () => {
           setIsLoading(false);
           return; 
         } else {
+          // If the character ID from storage is not found (e.g., deleted), clear storage.
           clearViewingStateFromStorage();
         }
       }
@@ -258,12 +116,23 @@ const App: React.FC = () => {
     setIsLoading(true);
     setError(null);
     try {
-      const characterWithEnsuredDetails = { 
+      const characterWithEnsuredDetails: Character = { 
         ...charToSave, 
-        id: charToSave.id || Date.now().toString(),
+        id: charToSave.id || `char_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`, // More robust ID
         classFeatures: charToSave.classFeatures || [], 
         racialFeatures: charToSave.racialFeatures || [],
-        rank: charToSave.rank || RANKS[0] 
+        rank: charToSave.rank || RANKS[0],
+        magic: { // Ensure magic object and its arrays are well-defined
+            spellcastingAbilityName: charToSave.magic?.spellcastingAbilityName,
+            spellSaveDC: charToSave.magic?.spellSaveDC || 0,
+            spellAttackBonus: charToSave.magic?.spellAttackBonus || 0,
+            cantripsKnown: charToSave.magic?.cantripsKnown || [],
+            spellsKnownPrepared: charToSave.magic?.spellsKnownPrepared || [],
+            spellbook: charToSave.magic?.spellbook || [],
+            spellSlots: (charToSave.magic?.spellSlots && charToSave.magic.spellSlots.length === 9)
+                        ? charToSave.magic.spellSlots
+                        : Array(9).fill(0),
+        }
       };
       const savedCharacter = await supabaseService.saveCharacter(characterWithEnsuredDetails);
 
@@ -302,17 +171,26 @@ const App: React.FC = () => {
       if ('rank' in updates && !updates.rank) {
         updates.rank = RANKS[0];
       }
-      // Ensure features arrays exist if being updated, even if to empty
       if ('classFeatures' in updates && !updates.classFeatures) updates.classFeatures = [];
       if ('racialFeatures' in updates && !updates.racialFeatures) updates.racialFeatures = [];
+      
+      // Ensure magic fields are properly handled if magic object is part of updates
+      if (updates.magic) {
+        updates.magic.cantripsKnown = updates.magic.cantripsKnown || [];
+        updates.magic.spellsKnownPrepared = updates.magic.spellsKnownPrepared || [];
+        updates.magic.spellbook = updates.magic.spellbook || [];
+        updates.magic.spellSlots = (updates.magic.spellSlots && updates.magic.spellSlots.length === 9)
+                                    ? updates.magic.spellSlots
+                                    : Array(9).fill(0);
+      }
+
 
       const updatedCharacter = await supabaseService.updateCharacter(characterId, updates);
       if (updatedCharacter) {
         setCharacters(prevChars => prevChars.map(c => c.id === characterId ? updatedCharacter : c));
         if (viewingCharacter && viewingCharacter.id === characterId) {
           setViewingCharacter(updatedCharacter);
-          localStorage.setItem(LOCAL_STORAGE_VIEWING_CHARACTER_ID_KEY, updatedCharacter.id);
-          localStorage.setItem(LOCAL_STORAGE_ACTIVE_SCREEN_KEY, 'player_sheet');
+          // No need to set localStorage here for viewingCharacter, it's already set or will be handled by navigation
         }
       } else {
          console.warn("Character not found for update or no data returned:", characterId);
@@ -341,20 +219,7 @@ const App: React.FC = () => {
           }
           if (editingCharacter && editingCharacter.id === characterIdToDelete) {
             setEditingCharacter(null);
-            if (userRole === 'player') setScreen('player_char_list');
-          }
-          if (updatedCharacters.length === 0 && characterIdToDelete === TEST_CHARACTER_ID) {
-              console.log("List is empty after deleting Pavel, re-adding test character Pavel to Supabase.");
-              const pavelWithDetails = { 
-                  ...initialCharacterData, 
-                  classFeatures: getInitialPavelClassFeatures(initialCharacterData.level),
-                  racialFeatures: getInitialPavelRacialFeatures(),
-                  rank: initialCharacterData.rank || RANKS[0]
-              };
-              const addedTestChar = await supabaseService.saveCharacter(pavelWithDetails);
-              if (addedTestChar) {
-                  setCharacters([addedTestChar]); 
-              }
+            if (userRole === 'player') setScreen('player_char_list'); // Or 'dm_list' if DM initiated
           }
         } else {
           throw new Error("Deletion failed or was not confirmed by the service.");
@@ -379,21 +244,30 @@ const App: React.FC = () => {
   const handlePlayerEditCharacter = (character: Character) => {
     setEditingCharacter(character);
     setScreen('player_form');
-    clearViewingStateFromStorage();
+    // Clear viewing state as we are moving to form, not directly viewing
+    // but keep role and active screen context for form return.
+    localStorage.removeItem(LOCAL_STORAGE_VIEWING_CHARACTER_ID_KEY); 
+    localStorage.setItem(LOCAL_STORAGE_ACTIVE_SCREEN_KEY, 'player_form');
   };
 
   const handlePlayerCreateCharacter = () => {
     setEditingCharacter(null); 
     setScreen('player_form');
-    clearViewingStateFromStorage();
+    localStorage.removeItem(LOCAL_STORAGE_VIEWING_CHARACTER_ID_KEY);
+    localStorage.setItem(LOCAL_STORAGE_ACTIVE_SCREEN_KEY, 'player_form');
   };
 
   const handleNavigateToList = () => {
     setViewingCharacter(null);
     setEditingCharacter(null);
-    clearViewingStateFromStorage();
-    if (userRole === 'player') setScreen('player_char_list');
-    else setScreen('dm_list');
+    clearViewingStateFromStorage(); // Clears viewing char ID and active screen for sheet/form
+    if (userRole === 'player') {
+        setScreen('player_char_list');
+        localStorage.setItem(LOCAL_STORAGE_ACTIVE_SCREEN_KEY, 'player_char_list');
+    } else {
+        setScreen('dm_list');
+        localStorage.setItem(LOCAL_STORAGE_ACTIVE_SCREEN_KEY, 'dm_list');
+    }
   };
 
   const handleRoleSelect = (role: 'player' | 'dm') => {
@@ -402,8 +276,10 @@ const App: React.FC = () => {
     clearViewingStateFromStorage();
     if (role === 'dm') {
       setScreen('dm_list');
+      localStorage.setItem(LOCAL_STORAGE_ACTIVE_SCREEN_KEY, 'dm_list');
     } else {
       setScreen('player_char_list');
+      localStorage.setItem(LOCAL_STORAGE_ACTIVE_SCREEN_KEY, 'player_char_list');
     }
   };
 
@@ -414,6 +290,7 @@ const App: React.FC = () => {
     setScreen('role');
     localStorage.removeItem(LOCAL_STORAGE_ROLE_KEY);
     clearViewingStateFromStorage();
+    localStorage.removeItem(LOCAL_STORAGE_ACTIVE_SCREEN_KEY); // Clear active screen as well
   };
 
   if (!isInitialized || isLoading && screen === 'role') { 
