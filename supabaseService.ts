@@ -17,22 +17,15 @@ const TABLE_NAME = 'characters';
 
 // List of top-level keys that might not exist as dedicated columns in the DB
 // and should be stripped before DB operations if they cause schema errors.
-// magic.currentSpellSlots is handled within the 'magic' JSONB column, so it's not listed here.
 const POTENTIALLY_MISSING_DB_COLUMNS: (keyof Character)[] = [
-  'maxHitDice', 'currentHitDice', 'hitDieType',
-  'currentRages', 'maxRages',
-  'currentBardicInspirations', 'maxBardicInspirations',
-  'currentChannelDivinityUses', 'maxChannelDivinityUses',
-  'currentSecondWindUses', 'maxSecondWindUses',
-  'currentActionSurgeUses', 'maxActionSurgeUses',
-  'currentKiPoints', 'maxKiPoints',
-  'currentLayOnHandsPool', 'maxLayOnHandsPool',
-  'currentRelentlessEnduranceUses', 'maxRelentlessEnduranceUses',
-  'currentBreathWeaponUses', 'maxBreathWeaponUses'
+  // Most fields are now expected to be in the database.
+  // 'feats' is kept here as it's derived from classFeatures in the app logic
+  // and should not be persisted directly to the database to avoid data duplication.
+  'feats'
 ];
 
-const sanitizeCharacterForDb = (characterData: Partial<Character>): Partial<Character> => {
-  const sanitizedData = { ...characterData };
+const sanitizeCharacterForDb = (characterData: Partial<Character>): { [key: string]: any } => {
+  const sanitizedData: { [key: string]: any } = { ...characterData };
   POTENTIALLY_MISSING_DB_COLUMNS.forEach(key => {
     delete sanitizedData[key];
   });
@@ -54,13 +47,13 @@ export const getCharacters = async (): Promise<Character[]> => {
 
 export const saveCharacter = async (character: Character): Promise<Character | null> => {
   const characterWithId = { ...character, id: character.id || Date.now().toString() };
-  const sanitizedCharacter = sanitizeCharacterForDb(characterWithId) as Character; // Cast needed after stripping optional keys
+  const sanitizedCharacter = sanitizeCharacterForDb(characterWithId);
 
   const { data, error } = await supabase
     .from(TABLE_NAME)
-    .upsert(sanitizedCharacter, { onConflict: 'id' })
+    .upsert(sanitizedCharacter as any, { onConflict: 'id' })
     .select()
-    .single(); 
+    .maybeSingle(); 
 
   if (error) {
     console.error('Error saving character:', error.message, error);
@@ -88,34 +81,41 @@ export const deleteCharacter = async (characterId: string): Promise<boolean> => 
   return !error;
 };
 
-export const updateCharacter = async (characterId: string, updates: Partial<Character>): Promise<Character | null> => {
+export const updateCharacter = async (characterId: string, updates: Partial<Character>): Promise<Partial<Character> | null> => {
   const sanitizedUpdates = sanitizeCharacterForDb(updates);
 
-  // If all updates were sanitized away, don't hit the DB
-  if (Object.keys(sanitizedUpdates).length === 0 && Object.keys(updates).length > 0) {
-      // This means all updates were fields not in DB, so we can't update them via Supabase.
-      // Return a representation of the character with local updates applied.
-      // This requires fetching the character or having its full state.
-      // For now, let's just log and return null or the original "updates" to signify client-side only.
-      // Or simply proceed, and Supabase might return an empty update if no recognized columns were changed.
-      // Let's proceed, if sanitizedUpdates is empty, Supabase will likely do nothing or error gracefully.
+  if (Object.keys(sanitizedUpdates).length === 0) {
+    // If all updates were for fields not in the database (e.g. 'feats'),
+    // we don't need to call Supabase. We can return the updates object
+    // to be merged client-side.
+    if (Object.keys(updates).length > 0) {
+      return updates;
+    }
+    // No updates at all were provided.
+    return null;
   }
-
 
   const { data, error } = await supabase
     .from(TABLE_NAME)
-    .update(sanitizedUpdates)
+    .update(sanitizedUpdates as any)
     .eq('id', characterId)
     .select()
-    .single();
+    .maybeSingle();
 
   if (error) {
     console.error('Error updating character:', error.message, error);
     throw error;
   }
-  // Similar to saveCharacter, merge the DB response with the intended full updates
-  // to give back a complete Character object to the client if possible.
-  return data ? { ...updates, ...data } as Character : null; 
+
+  if (!data) {
+    // This can happen if the characterId does not exist.
+    return null;
+  }
+  
+  // Return the persisted data from the DB, merged with any original updates
+  // that were not persisted (like 'feats'). Spreading `data` last ensures
+  // it is the source of truth for persisted fields.
+  return { ...updates, ...data };
 };
 
 export const getCharacterById = async (characterId: string): Promise<Character | null> => {

@@ -1,5 +1,4 @@
-
-import { ClassFeatureDefinition, FeatureChoiceDefinition, WIZARD_ARCANE_TRADITION_CHOICES, FIGHTER_MARTIAL_ARCHETYPE_CHOICES, BARBARIAN_PRIMAL_PATH_CHOICES, BARD_COLLEGE_CHOICES, CLERIC_DOMAIN_CHOICES, WARLOCK_PATRON_CHOICES, WARLOCK_PACT_BOON_CHOICES, WARLOCK_INVOCATION_CHOICES, DRUID_CIRCLE_CHOICES, SORCERER_ORIGIN_CHOICES, METAMAGIC_OPTIONS_CHOICES, PALADIN_OATH_CHOICES, ROGUE_ARCHETYPE_CHOICES, MONK_MONASTIC_TRADITION_CHOICES } from './types';
+import { ClassFeatureDefinition, FeatureChoiceDefinition, WIZARD_ARCANE_TRADITION_CHOICES, FIGHTER_MARTIAL_ARCHETYPE_CHOICES, BARBARIAN_PRIMAL_PATH_CHOICES, BARD_COLLEGE_CHOICES, CLERIC_DOMAIN_CHOICES, WARLOCK_PATRON_CHOICES, WARLOCK_PACT_BOON_CHOICES, WARLOCK_INVOCATION_CHOICES, DRUID_CIRCLE_CHOICES, SORCERER_ORIGIN_CHOICES, METAMAGIC_OPTIONS_CHOICES, PALADIN_OATH_CHOICES, ROGUE_ARCHETYPE_CHOICES, MONK_MONASTIC_TRADITION_CHOICES, DRAGON_ANCESTRY_CHOICES } from './types';
 import { FIGHTING_STYLE_OPTIONS } from './dndOptions';
 
 // --- Ranger Feature Choices ---
@@ -24,6 +23,52 @@ const RANGER_CONCLAVE_CHOICES: FeatureChoiceDefinition[] = [
     { value: "hunter", label: "Caçador (Hunter Conclave)", description: "Este arquétipo se concentra em caçar ameaças que variam de feras furiosas e monstros horríveis a tiranos e vilões." },
     { value: "beast_master", label: "Mestre das Feras (Beast Master Conclave)", description: "Este arquétipo incorpora uma profunda conexão com o mundo natural, manifestada através de um companheiro animal." },
 ];
+
+// --- Subclass Specific Choices (Ranger Hunter) ---
+const HUNTER_PREY_CHOICES: FeatureChoiceDefinition[] = [
+    { value: "colossus_slayer", label: "Abatedor de Colossos", description: "Sua tenacidade pode abater os inimigos mais potentes. Quando você atinge uma criatura com um ataque com arma, a criatura sofre 1d8 de dano extra se estiver abaixo de seu máximo de pontos de vida. Você pode causar esse dano extra apenas uma vez por turno.", damage: "1d8 uma vez por turno" },
+    { value: "giant_killer", label: "Matador de Gigantes", description: "Quando uma criatura Grande ou maior, a 1,5 metro de você, atinge ou erra você com um ataque, você pode usar sua reação para atacar aquela criatura imediatamente após seu ataque, desde que você possa ver a criatura." },
+    { value: "horde_breaker", label: "Quebrador de Horda", description: "Uma vez em cada um de seus turnos, quando você fizer um ataque com arma, você pode fazer outro ataque com a mesma arma contra uma criatura diferente que esteja a 1,5 metro do alvo original e dentro do alcance de sua arma." },
+];
+
+const DEFENSIVE_TACTICS_CHOICES: FeatureChoiceDefinition[] = [
+    { value: "escape_the_horde", label: "Fuga da Horda", description: "Ataques de oportunidade feitos contra você têm desvantagem." },
+    { value: "multiattack_defense", label: "Defesa contra Ataques Múltiplos", description: "Quando uma criatura atinge você com um ataque, você ganha +4 de bônus na CA contra todos os ataques subsequentes feitos pela mesma criatura pelo resto do turno." },
+    { value: "steel_will", label: "Vontade de Aço", description: "Você tem vantagem em testes de resistência para não ser amedrontado." },
+];
+
+const MULTIATTACK_CHOICES: FeatureChoiceDefinition[] = [
+    { value: "volley", label: "Saraivada (Volley)", description: "Você pode usar sua ação para fazer um ataque à distância contra qualquer número de criaturas a até 3 metros de um ponto que você possa ver dentro do alcance da sua arma. Você deve ter munição para cada alvo, como de costume, e você faz uma jogada de ataque separada para cada alvo." },
+    { value: "whirlwind_attack", label: "Ataque Redemoinho", description: "Você pode usar sua ação para fazer um ataque corpo-a-corpo contra qualquer número de criaturas a 1,5 metro de você, com uma jogada de ataque separada para cada alvo." },
+];
+
+const SUPERIOR_HUNTERS_DEFENSE_CHOICES: FeatureChoiceDefinition[] = [
+    { value: "evasion", label: "Evasão", description: "Quando você está sujeito a um efeito que permite fazer um teste de resistência de Destreza para sofrer apenas metade do dano, você, em vez disso, não sofre dano se for bem-sucedido no teste de resistência e apenas metade do dano se falhar." },
+    { value: "stand_against_the_tide", label: "Resistir à Maré", description: "Quando uma criatura hostil erra você com um ataque corpo-a-corpo, você pode usar sua reação para forçar aquela criatura a repetir o mesmo ataque contra outra criatura (que não seja ela mesma) de sua escolha." },
+    { value: "uncanny_dodge", label: "Esquiva Sobrenatural", description: "Quando um atacante que você pode ver atinge você com um ataque, você pode usar sua reação para reduzir pela metade o dano do ataque contra você." },
+];
+
+
+// --- Subclass Specific Choices (Fighter Battle Master) ---
+const BATTLE_MASTER_MANEUVER_CHOICES: FeatureChoiceDefinition[] = [
+    { value: "ambush", label: "Emboscada", description: "Quando você faz um teste de Destreza (Furtividade) ou uma jogada de iniciativa, você pode gastar um dado de superioridade para adicionar o dado à rolagem." },
+    { value: "commanders_strike", label: "Golpe do Comandante", description: "Quando você realiza a ação de Ataque no seu turno, você pode renunciar a um de seus ataques e usar sua ação bônus para direcionar um de seus companheiros a atacar. Quando você faz isso, escolha uma criatura amigável que possa ver ou ouvir você, e gaste um dado de superioridade. Aquela criatura pode usar imediatamente sua reação para fazer um ataque com arma, adicionando o dado de superioridade à jogada de dano do ataque." },
+    { value: "disarming_attack", label: "Ataque de Desarme", description: "Quando você atinge uma criatura com um ataque de arma, você pode gastar um dado de superioridade para tentar desarmar o alvo, forçando-o a soltar um item de sua escolha que esteja segurando. Você adiciona o dado de superioridade à jogada de dano do ataque, e o alvo deve fazer um teste de resistência de Força. Em uma falha, ele solta o objeto de sua escolha. O objeto cai a seus pés." },
+    { value: "distracting_strike", label: "Ataque de Distração", description: "Quando você atinge uma criatura com um ataque de arma, você pode gastar um dado de superioridade para distrair a criatura, abrindo uma brecha para seus aliados. Você adiciona o dado de superioridade à jogada de dano do ataque. A próxima jogada de ataque contra o alvo por um atacante que não seja você tem vantagem se o ataque for feito antes do início do seu próximo turno." },
+    { value: "evasive_footwork", label: "Trabalho de Pés Evasivo", description: "Quando você se move, você pode gastar um dado de superioridade, rolando o dado e adicionando o número rolado à sua CA até que você pare de se mover." },
+    { value: "feinting_attack", label: "Ataque de Finta", description: "Você pode gastar um dado de superioridade e usar uma ação bônus em seu turno para fintar, escolhendo uma criatura a 1,5 metro de você como seu alvo. Você tem vantagem em sua próxima jogada de ataque contra aquela criatura. Se aquele ataque acertar, adicione o dado de superioridade à jogada de dano do ataque." },
+    { value: "goading_attack", label: "Ataque Provocador", description: "Quando você atinge uma criatura com um ataque de arma, você pode gastar um dado de superioridade para tentar provocar o alvo a atacá-lo. Você adiciona o dado de superioridade à jogada de dano do ataque, e o alvo deve fazer um teste de resistência de Sabedoria. Em uma falha, o alvo tem desvantagem em todas as jogadas de ataque contra alvos que não sejam você até o final do seu próximo turno." },
+    { value: "lunging_attack", label: "Ataque de Estocada", description: "Quando você faz um ataque corpo a corpo em seu turno, você pode gastar um dado de superioridade para aumentar seu alcance para aquele ataque em 1,5 metro. Se você acertar, você adiciona o dado de superioridade à jogada de dano do ataque." },
+    { value: "maneuvering_attack", label: "Ataque de Manobra", description: "Quando você atinge uma criatura com um ataque de arma, você pode gastar um dado de superioridade para manobrar um de seus companheiros para uma posição mais vantajosa. Você adiciona o dado de superioridade à jogada de dano do ataque, e você escolhe uma criatura amigável que possa ver ou ouvir você. Aquela criatura pode usar sua reação para se mover até metade de seu deslocamento sem provocar ataques de oportunidade do alvo do seu ataque." },
+    { value: "parry", label: "Aparar", description: "Quando outra criatura o danifica com um ataque corpo a corpo, você pode usar sua reação e gastar um dado de superioridade para reduzir o dano pelo número que você rolar em seu dado de superioridade + seu modificador de Destreza." },
+    { value: "precision_attack", label: "Ataque de Precisão", description: "Quando você faz uma jogada de ataque de arma contra uma criatura, você pode gastar um dado de superioridade para adicioná-lo à rolagem. Você pode usar esta manobra antes ou depois de fazer a jogada de ataque, mas antes de quaisquer efeitos do ataque serem aplicados." },
+    { value: "pushing_attack", label: "Ataque de Empurrão", description: "Quando você atinge uma criatura com um ataque de arma, você pode gastar um dado de superioridade para tentar empurrar o alvo para longe. Você adiciona o dado de superioridade à jogada de dano do ataque, e se o alvo for Grande ou menor, ele deve fazer um teste de resistência de Força. Em uma falha, você empurra o alvo até 4,5 metros para longe de você." },
+    { value: "rally", label: "Incentivar", description: "Em seu turno, você pode usar uma ação bônus e gastar um dado de superioridade para encorajar um de seus companheiros. Quando você o faz, escolha uma criatura amigável que possa ver ou ouvir você. Aquela criatura ganha pontos de vida temporários iguais à rolagem do dado de superioridade + seu modificador de Carisma." },
+    { value: "riposte", label: "Ripostar", description: "Quando uma criatura erra você com um ataque corpo a corpo, você pode usar sua reação e gastar um dado de superioridade para fazer um ataque de arma corpo a corpo contra a criatura. Se você acertar, você adiciona o dado de superioridade à jogada de dano do ataque." },
+    { value: "sweeping_attack", label: "Ataque Amplo", description: "Quando você atinge uma criatura com um ataque de arma corpo a corpo, você pode gastar um dado de superioridade para tentar danificar outra criatura com o mesmo ataque. Escolha outra criatura a 1,5 metro do alvo original e dentro do seu alcance. Se a jogada de ataque original acertaria a segunda criatura, ela sofre dano igual ao número que você rolar em seu dado de superioridade. O tipo de dano é o mesmo do ataque original." },
+    { value: "trip_attack", label: "Ataque de Derrubada", description: "Quando você atinge uma criatura com um ataque de arma, você pode gastar um dado de superioridade para tentar derrubar o alvo. Você adiciona o dado de superioridade à jogada de dano do ataque, e se o alvo for Grande ou menor, ele deve fazer um teste de resistência de Força. Em uma falha, ele é derrubado (fica caído)." },
+];
+
 
 // --- Ranger Feature Definitions ---
 export const RANGER_FEATURES_DEFINITIONS: ClassFeatureDefinition[] = [
@@ -58,19 +103,27 @@ export const RANGER_FEATURES_DEFINITIONS: ClassFeatureDefinition[] = [
     choices: RANGER_CONCLAVE_CHOICES, maxChoices: 1,
   },
   {
+    id: "ranger_hunter_prey", level: 3, name: "Presa do Caçador",
+    description: "Sua perícia em caça se manifesta de uma forma especializada. Escolha uma das seguintes opções.",
+    type: 'choice', selectionPrompt: "Escolha sua tática de Presa do Caçador:",
+    choices: HUNTER_PREY_CHOICES, maxChoices: 1,
+    subclassPrerequisite: { featureId: 'ranger_conclave', choiceValue: 'hunter' }
+  },
+  {
+    id: "ranger_beast_master_companion", level: 3, name: "Companheiro do Patrulheiro",
+    description: "Você ganha um companheiro animal que o acompanha em suas aventuras e é treinado para lutar ao seu lado. (Detalhes específicos sobre o companheiro devem ser anotados separadamente).",
+    type: 'auto',
+    subclassPrerequisite: { featureId: 'ranger_conclave', choiceValue: 'beast_master' }
+  },
+  {
     id: "ranger_primeval_awareness", level: 3, name: "Consciência Primitiva",
     description: "A partir do 3º nível, você pode usar sua ação e gastar um espaço de magia para sentir a presença de certos tipos de criaturas (aberrações, celestiais, dragões, elementais, fadas, infernais, mortos-vivos) a até 1,5 km (ou 9 km em terreno favorito). Não revela localização ou número.",
     type: 'auto',
   },
   {
     id: "ranger_asi_4", level: 4, name: "Incremento no Valor de Habilidade (Patrulheiro Nível 4)",
-    description: "Você pode aumentar um valor de habilidade à sua escolha em 2, ou pode aumentar dois valores de habilidade à sua escolha em 1. Você não pode aumentar um valor de habilidade acima de 20 usando esta característica. (Ajuste seus atributos diretamente na seção de Atributos).",
+    description: "Você pode aumentar um valor de habilidade à sua escolha em 2, ou pode aumentar dois valores de habilidade à sua escolha em 1. Você não pode aumentar um valor de habilidade acima de 20 usando esta característica.",
     type: 'asi',
-  },
-  {
-    id: "ranger_conclave_feature_5", level: 5, name: "Característica de Conclave de Patrulheiro (Nível 5)",
-    description: "Você ganha uma característica determinada pelo seu Conclave de Patrulheiro escolhido. (Consulte a descrição do seu conclave para detalhes e adicione às Habilidades se necessário).",
-    type: 'auto', 
   },
    {
     id: "ranger_extra_attack", level: 5, name: "Ataque Extra (Patrulheiro)",
@@ -79,20 +132,28 @@ export const RANGER_FEATURES_DEFINITIONS: ClassFeatureDefinition[] = [
   },
   {
     id: "ranger_favored_enemy_6", level: 6, name: "Inimigo Favorito (2º tipo)",
-    description: "No 6º nível, você escolhe um tipo adicional de inimigo favorito. Os benefícios para este novo tipo são os mesmos do seu primeiro inimigo favorito. Você também aprende um idioma adicional falado por este inimigo (anote o idioma em 'Habilidades').",
+    description: "No 6º nível, você escolhe um tipo adicional de inimigo favorito. Os benefícios para este novo tipo são os mesmos do seu primeiro inimigo favorito. Você também aprende um idioma adicional falado por este inimigo.",
     type: 'choice', selectionPrompt: "Escolha seu segundo Inimigo Favorito:",
     choices: FAVORED_ENEMY_CHOICES, maxChoices: 1,
   },
   {
     id: "ranger_natural_explorer_6", level: 6, name: "Explorador Natural (2º terreno)",
-    description: "No 6º nível, você escolhe um tipo de terreno favorito adicional. Você ganha os benefícios de Explorador Natural para este novo terreno. Além disso, enquanto estiver em qualquer um de seus terrenos favoritos, você ganha vantagem em jogadas de iniciativa e, no seu primeiro turno durante o combate, você tem vantagem nas jogadas de ataque contra criaturas que ainda não agiram.",
+    description: "No 6º nível, você escolhe um tipo de terreno favorito adicional. Você ganha os benefícios de Explorador Natural para este novo terreno.",
     type: 'choice', selectionPrompt: "Escolha seu segundo Terreno Favorito:",
     choices: NATURAL_EXPLORER_TERRAIN_CHOICES, maxChoices: 1,
   },
   {
-    id: "ranger_conclave_feature_7", level: 7, name: "Característica de Conclave de Patrulheiro (Nível 7)",
-    description: "Você ganha uma característica determinada pelo seu Conclave de Patrulheiro escolhido.",
+    id: "ranger_hunter_defensive_tactics", level: 7, name: "Táticas Defensivas",
+    description: "No 7º nível, você ganha uma das seguintes características de sua escolha.",
+    type: 'choice', selectionPrompt: "Escolha sua Tática Defensiva:",
+    choices: DEFENSIVE_TACTICS_CHOICES, maxChoices: 1,
+    subclassPrerequisite: { featureId: 'ranger_conclave', choiceValue: 'hunter' }
+  },
+  {
+    id: "ranger_beast_master_exceptional_training", level: 7, name: "Treinamento Excepcional",
+    description: "No 7º nível, em qualquer um dos seus turnos em que seu companheiro animal não atacar, você pode usar uma ação bônus para comandar o companheiro a realizar a ação Ajudar, Correr, Desengajar ou Esquivar.",
     type: 'auto',
+    subclassPrerequisite: { featureId: 'ranger_conclave', choiceValue: 'beast_master' }
   },
   {
     id: "ranger_asi_8", level: 8, name: "Incremento no Valor de Habilidade (Patrulheiro Nível 8)",
@@ -101,7 +162,7 @@ export const RANGER_FEATURES_DEFINITIONS: ClassFeatureDefinition[] = [
   },
   {
     id: "ranger_land_stride", level: 8, name: "Pés Rápidos (Land's Stride)",
-    description: "A partir do 8° nível, mover-se através de terreno difícil não-mágico não te custa movimento extra. Você também pode passar através de plantas não-mágicas sem ser atrasado por elas e sem sofrer dano delas se elas tiverem espinhos, espinhos ou um perigo similar. Além disso, você tem vantagem em testes de resistência contra plantas que são criadas magicamente ou manipuladas para impedir o movimento, como aquelas criadas pela magia constrição.",
+    description: "A partir do 8° nível, mover-se através de terreno difícil não-mágico não te custa movimento extra. Você também pode passar através de plantas não-mágicas sem ser atrasado por elas e sem sofrer dano delas se elas tiverem espinhos, espinhos ou um perigo similar. Além disso, você tem vantagem em testes de resistência contra plantas que são criadas magicamente ou manipuladas para impedir o movimento.",
     type: 'auto',
   },
   {
@@ -116,9 +177,17 @@ export const RANGER_FEATURES_DEFINITIONS: ClassFeatureDefinition[] = [
     type: 'auto',
   },
   {
-    id: "ranger_conclave_feature_11", level: 11, name: "Característica de Conclave de Patrulheiro (Nível 11)",
-    description: "Você ganha uma característica determinada pelo seu Conclave de Patrulheiro escolhido.",
+    id: "ranger_hunter_multiattack", level: 11, name: "Ataque Múltiplo",
+    description: "No 11º nível, você ganha uma das seguintes características de sua escolha.",
+    type: 'choice', selectionPrompt: "Escolha sua opção de Ataque Múltiplo:",
+    choices: MULTIATTACK_CHOICES, maxChoices: 1,
+    subclassPrerequisite: { featureId: 'ranger_conclave', choiceValue: 'hunter' }
+  },
+  {
+    id: "ranger_beast_master_bestial_fury", level: 11, name: "Fúria Bestial",
+    description: "A partir do 11º nível, seu companheiro animal pode fazer dois ataques quando você comanda que ele use a ação de Ataque.",
     type: 'auto',
+    subclassPrerequisite: { featureId: 'ranger_conclave', choiceValue: 'beast_master' }
   },
   {
     id: "ranger_asi_12", level: 12, name: "Incremento no Valor de Habilidade (Patrulheiro Nível 12)",
@@ -137,9 +206,17 @@ export const RANGER_FEATURES_DEFINITIONS: ClassFeatureDefinition[] = [
     type: 'auto',
   },
   {
-    id: "ranger_conclave_feature_15", level: 15, name: "Característica de Conclave de Patrulheiro (Nível 15)",
-    description: "Você ganha uma característica determinada pelo seu Conclave de Patrulheiro escolhido.",
+    id: "ranger_hunter_superior_defense", level: 15, name: "Defesa Superior do Caçador",
+    description: "No 15º nível, você ganha uma das seguintes características de sua escolha.",
+    type: 'choice', selectionPrompt: "Escolha sua Defesa Superior:",
+    choices: SUPERIOR_HUNTERS_DEFENSE_CHOICES, maxChoices: 1,
+    subclassPrerequisite: { featureId: 'ranger_conclave', choiceValue: 'hunter' }
+  },
+  {
+    id: "ranger_beast_master_share_spells", level: 15, name: "Compartilhar Magias",
+    description: "A partir do 15º nível, quando você conjura uma magia que tem como alvo apenas você, você também pode fazer com que a magia afete seu companheiro animal se o companheiro estiver a até 9 metros de você.",
     type: 'auto',
+    subclassPrerequisite: { featureId: 'ranger_conclave', choiceValue: 'beast_master' }
   },
   {
     id: "ranger_asi_16", level: 16, name: "Incremento no Valor de Habilidade (Patrulheiro Nível 16)",
@@ -264,9 +341,35 @@ export const FIGHTER_FEATURES_DEFINITIONS: ClassFeatureDefinition[] = [
     maxChoices: 1,
   },
   {
-    id: "fighter_archetype_feature_3", level: 3, name: "Característica de Arquétipo Marcial (Nível 3)",
-    description: "Você ganha uma característica determinada pelo seu Arquétipo Marcial escolhido.",
-    type: 'auto', 
+    id: "fighter_champion_improved_critical", level: 3, name: "Crítico Aprimorado",
+    description: "Seus ataques com arma marcam um acerto crítico em uma rolagem de 19 ou 20.",
+    type: 'auto',
+    subclassPrerequisite: { featureId: 'fighter_martial_archetype', choiceValue: 'champion' }
+  },
+  {
+    id: "fighter_battle_master_combat_superiority", level: 3, name: "Superioridade em Combate",
+    description: "Você aprende manobras que são abastecidas por dados especiais chamados dados de superioridade. Você aprende três manobras de sua escolha. Muitas manobras aprimoram um ataque de alguma forma. Você pode usar apenas uma manobra por ataque. Você tem quatro dados de superioridade, que são d8s. Um dado de superioridade é gasto quando você o usa. Você recupera todos os seus dados de superioridade gastos quando termina um descanso curto ou longo.",
+    type: 'choice', selectionPrompt: "Escolha 3 Manobras:",
+    choices: BATTLE_MASTER_MANEUVER_CHOICES, maxChoices: 3,
+    subclassPrerequisite: { featureId: 'fighter_martial_archetype', choiceValue: 'battle_master' }
+  },
+  {
+    id: "fighter_battle_master_student_of_war", level: 3, name: "Estudante da Guerra",
+    description: "Você ganha proficiência com um tipo de ferramenta de artesão de sua escolha.",
+    type: 'auto',
+    subclassPrerequisite: { featureId: 'fighter_martial_archetype', choiceValue: 'battle_master' }
+  },
+  {
+    id: "fighter_eldritch_knight_spellcasting", level: 3, name: "Conjuração (Cavaleiro Arcano)",
+    description: "Você aumenta sua proeza marcial com a capacidade de conjurar magias. Você aprende dois truques de sua escolha da lista de magias de mago. Você aprende três magias de 1º nível de sua escolha, duas das quais devem ser de escolas de abjuração ou evocação. Inteligência é sua habilidade de conjuração.",
+    type: 'auto',
+    subclassPrerequisite: { featureId: 'fighter_martial_archetype', choiceValue: 'eldritch_knight' }
+  },
+  {
+    id: "fighter_eldritch_knight_weapon_bond", level: 3, name: "Vínculo com Arma",
+    description: "Você aprende um ritual que cria um vínculo mágico entre você e uma arma. Você realiza o ritual ao longo de 1 hora, que pode ser feito durante um descanso curto. A arma deve estar ao seu alcance durante todo o ritual. Você pode ter até duas armas vinculadas. Se tentar vincular uma terceira arma, deve quebrar o vínculo com uma das outras duas. Enquanto sua arma vinculada estiver no mesmo plano de existência, você pode convocá-la como uma ação bônus em seu turno, fazendo-a se teleportar instantaneamente para sua mão.",
+    type: 'auto',
+    subclassPrerequisite: { featureId: 'fighter_martial_archetype', choiceValue: 'eldritch_knight' }
   },
   {
     id: "fighter_asi_4", level: 4, name: "Incremento no Valor de Habilidade (Guerreiro Nível 4)",
@@ -284,9 +387,29 @@ export const FIGHTER_FEATURES_DEFINITIONS: ClassFeatureDefinition[] = [
     type: 'asi',
   },
   {
-    id: "fighter_archetype_feature_7", level: 7, name: "Característica de Arquétipo Marcial (Nível 7)",
-    description: "Você ganha uma característica determinada pelo seu Arquétipo Marcial escolhido.",
+    id: "fighter_champion_remarkable_athlete", level: 7, name: "Atleta Notável",
+    description: "Você pode adicionar metade do seu bônus de proficiência (arredondado para cima) a qualquer teste de Força, Destreza ou Constituição que ainda não use seu bônus de proficiência. Além disso, quando você faz um salto em distância correndo, a distância que você pode saltar aumenta em um número de pés igual ao seu modificador de Força.",
     type: 'auto',
+    subclassPrerequisite: { featureId: 'fighter_martial_archetype', choiceValue: 'champion' }
+  },
+  {
+    id: "fighter_battle_master_know_your_enemy", level: 7, name: "Conheça seu Inimigo",
+    description: "Se você passar pelo menos 1 minuto observando ou interagindo com outra criatura fora de combate, você pode aprender certas informações sobre suas capacidades em comparação com as suas. O Mestre diz se a criatura é igual, superior ou inferior em relação a duas das seguintes características de sua escolha: Valor de Força, Valor de Destreza, Valor de Constituição, Classe de Armadura, Pontos de Vida Atuais, Nível de Classe Total (se houver), Níveis de classe de Guerreiro (se houver).",
+    type: 'auto',
+    subclassPrerequisite: { featureId: 'fighter_martial_archetype', choiceValue: 'battle_master' }
+  },
+   {
+    id: "fighter_battle_master_maneuvers_7", level: 7, name: "Manobras Adicionais (Nível 7)",
+    description: "Você aprende duas manobras adicionais de sua escolha, que não contam para o seu número de manobras conhecidas.",
+    type: 'choice', selectionPrompt: "Escolha 2 Manobras Adicionais:",
+    choices: BATTLE_MASTER_MANEUVER_CHOICES, maxChoices: 2,
+    subclassPrerequisite: { featureId: 'fighter_martial_archetype', choiceValue: 'battle_master' }
+  },
+  {
+    id: "fighter_eldritch_knight_war_magic", level: 7, name: "Magia de Guerra",
+    description: "A partir do 7º nível, quando você usa sua ação para conjurar um truque, você pode fazer um ataque com arma como uma ação bônus.",
+    type: 'auto',
+    subclassPrerequisite: { featureId: 'fighter_martial_archetype', choiceValue: 'eldritch_knight' }
   },
   {
     id: "fighter_asi_8", level: 8, name: "Incremento no Valor de Habilidade (Guerreiro Nível 8)",
@@ -299,9 +422,30 @@ export const FIGHTER_FEATURES_DEFINITIONS: ClassFeatureDefinition[] = [
     type: 'auto',
   },
   {
-    id: "fighter_archetype_feature_10", level: 10, name: "Característica de Arquétipo Marcial (Nível 10)",
-    description: "Você ganha uma característica determinada pelo seu Arquétipo Marcial escolhido.",
+    id: "fighter_champion_additional_style", level: 10, name: "Estilo de Luta Adicional",
+    description: "Você pode escolher uma segunda opção da característica Estilo de Luta.",
+    type: 'choice', selectionPrompt: "Escolha seu Estilo de Luta Adicional:",
+    choices: FIGHTING_STYLE_OPTIONS.filter(opt => opt.name !== "").map(opt => ({ value: opt.name, label: opt.name, description: opt.description })), maxChoices: 1,
+    subclassPrerequisite: { featureId: 'fighter_martial_archetype', choiceValue: 'champion' }
+  },
+  {
+    id: "fighter_battle_master_improved_superiority_d10", level: 10, name: "Superioridade em Combate Aprimorada (d10)",
+    description: "Seus dados de superioridade tornam-se d10s. No 18º nível, eles se tornam d12s.",
     type: 'auto',
+    subclassPrerequisite: { featureId: 'fighter_martial_archetype', choiceValue: 'battle_master' }
+  },
+  {
+    id: "fighter_battle_master_maneuvers_10", level: 10, name: "Manobras Adicionais (Nível 10)",
+    description: "Você aprende duas manobras adicionais de sua escolha.",
+    type: 'choice', selectionPrompt: "Escolha 2 Manobras Adicionais:",
+    choices: BATTLE_MASTER_MANEUVER_CHOICES, maxChoices: 2,
+    subclassPrerequisite: { featureId: 'fighter_martial_archetype', choiceValue: 'battle_master' }
+  },
+  {
+    id: "fighter_eldritch_knight_eldritch_strike", level: 10, name: "Golpe Arcano",
+    description: "No 10º nível, você aprende como fazer seus ataques com arma enfraquecerem as defesas de uma criatura. Quando você atinge uma criatura com um ataque de arma, aquela criatura tem desvantagem no próximo teste de resistência que fizer contra uma magia que você conjurar antes do final do seu próximo turno.",
+    type: 'auto',
+    subclassPrerequisite: { featureId: 'fighter_martial_archetype', choiceValue: 'eldritch_knight' }
   },
   {
     id: "fighter_extra_attack_11", level: 11, name: "Ataque Extra (2)",
@@ -324,9 +468,29 @@ export const FIGHTER_FEATURES_DEFINITIONS: ClassFeatureDefinition[] = [
     type: 'asi',
   },
   {
-    id: "fighter_archetype_feature_15", level: 15, name: "Característica de Arquétipo Marcial (Nível 15)",
-    description: "Você ganha uma característica determinada pelo seu Arquétipo Marcial escolhido.",
+    id: "fighter_champion_superior_critical", level: 15, name: "Crítico Superior",
+    description: "Seus ataques com arma marcam um acerto crítico em uma rolagem de 18-20.",
     type: 'auto',
+    subclassPrerequisite: { featureId: 'fighter_martial_archetype', choiceValue: 'champion' }
+  },
+  {
+    id: "fighter_battle_master_relentless", level: 15, name: "Implacável",
+    description: "Quando você rola a iniciativa e não tem dados de superioridade restantes, você recupera 1 dado de superioridade.",
+    type: 'auto',
+    subclassPrerequisite: { featureId: 'fighter_martial_archetype', choiceValue: 'battle_master' }
+  },
+  {
+    id: "fighter_battle_master_maneuvers_15", level: 15, name: "Manobras Adicionais (Nível 15)",
+    description: "Você aprende duas manobras adicionais de sua escolha.",
+    type: 'choice', selectionPrompt: "Escolha 2 Manobras Adicionais:",
+    choices: BATTLE_MASTER_MANEUVER_CHOICES, maxChoices: 2,
+    subclassPrerequisite: { featureId: 'fighter_martial_archetype', choiceValue: 'battle_master' }
+  },
+  {
+    id: "fighter_eldritch_knight_arcane_charge", level: 15, name: "Carga Arcana",
+    description: "No 15º nível, você ganha a habilidade de se teleportar até 9 metros para um espaço desocupado que você possa ver quando usa seu Surto de Ação. Você pode se teleportar antes ou depois da ação adicional.",
+    type: 'auto',
+    subclassPrerequisite: { featureId: 'fighter_martial_archetype', choiceValue: 'eldritch_knight' }
   },
   {
     id: "fighter_asi_16", level: 16, name: "Incremento no Valor de Habilidade (Guerreiro Nível 16)",
@@ -344,9 +508,22 @@ export const FIGHTER_FEATURES_DEFINITIONS: ClassFeatureDefinition[] = [
     type: 'auto',
   },
   {
-    id: "fighter_archetype_feature_18", level: 18, name: "Característica de Arquétipo Marcial (Nível 18)",
-    description: "Você ganha uma característica determinada pelo seu Arquétipo Marcial escolhido.",
+    id: "fighter_champion_survivor", level: 18, name: "Sobrevivente",
+    description: "Você atinge o auge da resiliência em batalha. No início de cada um de seus turnos, você recupera pontos de vida iguais a 5 + seu modificador de Constituição se você não tiver mais da metade de seus pontos de vida. Você não ganha este benefício se tiver 0 pontos de vida.",
     type: 'auto',
+    subclassPrerequisite: { featureId: 'fighter_martial_archetype', choiceValue: 'champion' }
+  },
+  {
+    id: "fighter_battle_master_improved_superiority_d12", level: 18, name: "Superioridade em Combate Aprimorada (d12)",
+    description: "Seus dados de superioridade tornam-se d12s.",
+    type: 'auto',
+    subclassPrerequisite: { featureId: 'fighter_martial_archetype', choiceValue: 'battle_master' }
+  },
+  {
+    id: "fighter_eldritch_knight_improved_war_magic", level: 18, name: "Magia de Guerra Aprimorada",
+    description: "A partir do 18º nível, quando você conjura uma magia como sua ação, você pode fazer um ataque com arma como uma ação bônus.",
+    type: 'auto',
+    subclassPrerequisite: { featureId: 'fighter_martial_archetype', choiceValue: 'eldritch_knight' }
   },
   {
     id: "fighter_asi_19", level: 19, name: "Incremento no Valor de Habilidade (Guerreiro Nível 19)",
@@ -389,22 +566,38 @@ export const BARBARIAN_FEATURES_DEFINITIONS: ClassFeatureDefinition[] = [
     maxChoices: 1,
   },
   {
-    id: "barbarian_path_feature_3", level: 3, name: "Característica do Caminho Primitivo (Nível 3)",
-    description: "Você ganha uma característica determinada pelo seu Caminho Primitivo escolhido.",
+    id: "barbarian_berserker_frenzy", level: 3, name: "Frenesi",
+    description: "A partir do momento em que você escolhe este caminho no 3° nível, você pode entrar em frenesi quando estiver em fúria. Se o fizer, pela duração da sua fúria, você pode fazer um único ataque com arma corpo-a-corpo com sua ação bônus em cada um dos seus turnos após este. Quando sua fúria acabar, você sofre um nível de exaustão.",
     type: 'auto',
+    subclassPrerequisite: { featureId: 'barbarian_primal_path', choiceValue: 'berserker' }
   },
   { id: "barbarian_asi_4", level: 4, name: "Incremento no Valor de Habilidade (Bárbaro Nível 4)", type: 'asi', description: "Aumente seus atributos." },
   { id: "barbarian_extra_attack_5", level: 5, name: "Ataque Extra", type: 'auto', description: "Pode atacar duas vezes." },
   { id: "barbarian_fast_movement_5", level: 5, name: "Movimento Rápido", type: 'auto', description: "Seu deslocamento aumenta em 3m se não estiver usando armadura pesada." },
-  { id: "barbarian_path_feature_6", level: 6, name: "Característica do Caminho Primitivo (Nível 6)", type: 'auto', description: "Característica do seu caminho." },
+  {
+    id: "barbarian_berserker_mindless_rage", level: 6, name: "Fúria Incontrolável",
+    description: "A partir do 6° nível, você não pode ser enfeitiçado ou amedrontado enquanto estiver em fúria. Se você estiver enfeitiçado ou amedrontado quando entrar em fúria, o efeito é suspenso pela duração da fúria.",
+    type: 'auto',
+    subclassPrerequisite: { featureId: 'barbarian_primal_path', choiceValue: 'berserker' }
+  },
   { id: "barbarian_feral_instinct_7", level: 7, name: "Instinto Selvagem", type: 'auto', description: "Vantagem em iniciativa. Age no primeiro turno mesmo surpreso (se entrar em fúria)." },
   { id: "barbarian_asi_8", level: 8, name: "Incremento no Valor de Habilidade (Bárbaro Nível 8)", type: 'asi', description: "Aumente seus atributos." },
   { id: "barbarian_brutal_critical_9", level: 9, name: "Crítico Brutal (+1 dado)", type: 'auto', description: "Rola um dado de dano adicional em críticos." },
-  { id: "barbarian_path_feature_10", level: 10, name: "Característica do Caminho Primitivo (Nível 10)", type: 'auto', description: "Característica do seu caminho." },
+  {
+    id: "barbarian_berserker_intimidating_presence", level: 10, name: "Presença Intimidadora",
+    description: "A partir do 10° nível, você pode usar sua ação para amedrontar alguém com sua presença ameaçadora. Quando o fizer, escolha uma criatura que você possa ver a até 9 metros de você. Se a criatura puder ver ou ouvir você, ela deve ser bem-sucedida em um teste de resistência de Sabedoria (CD 8 + seu bônus de proficiência + seu modificador de Carisma) ou ficará amedrontada por você até o final do seu próximo turno. Nos turnos subsequentes, você pode usar sua ação para estender a duração deste efeito na criatura amedrontada até o final do seu próximo turno. Este efeito termina se a criatura terminar seu turno fora da sua linha de visão ou a mais de 18 metros de você.",
+    type: 'auto',
+    subclassPrerequisite: { featureId: 'barbarian_primal_path', choiceValue: 'berserker' }
+  },
   { id: "barbarian_relentless_rage_11", level: 11, name: "Fúria Implacável", type: 'auto', description: "Pode fazer teste de CON CD 10 para ficar com 1 PV ao invés de 0 (se não morrer instantaneamente). CD aumenta em 5 a cada uso." },
   { id: "barbarian_asi_12", level: 12, name: "Incremento no Valor de Habilidade (Bárbaro Nível 12)", type: 'asi', description: "Aumente seus atributos." },
   { id: "barbarian_brutal_critical_13", level: 13, name: "Crítico Brutal (+2 dados)", type: 'auto', description: "Rola dois dados de dano adicionais em críticos." },
-  { id: "barbarian_path_feature_14", level: 14, name: "Característica do Caminho Primitivo (Nível 14)", type: 'auto', description: "Característica do seu caminho." },
+  {
+    id: "barbarian_berserker_retaliation", level: 14, name: "Retaliação",
+    description: "A partir do 14° nível, quando você sofrer dano de uma criatura que está a 1,5 metro de você, você pode usar sua reação para fazer um ataque com arma corpo-a-corpo contra aquela criatura.",
+    type: 'auto',
+    subclassPrerequisite: { featureId: 'barbarian_primal_path', choiceValue: 'berserker' }
+  },
   { id: "barbarian_persistent_rage_15", level: 15, name: "Fúria Persistente", type: 'auto', description: "Sua fúria só termina prematuramente se você cair inconsciente ou decidir terminá-la." },
   { id: "barbarian_asi_16", level: 16, name: "Incremento no Valor de Habilidade (Bárbaro Nível 16)", type: 'asi', description: "Aumente seus atributos." },
   { id: "barbarian_brutal_critical_17", level: 17, name: "Crítico Brutal (+3 dados)", type: 'auto', description: "Rola três dados de dano adicionais em críticos." },
@@ -517,7 +710,31 @@ export const DRUID_FEATURES_DEFINITIONS: ClassFeatureDefinition[] = [
 export const SORCERER_FEATURES_DEFINITIONS: ClassFeatureDefinition[] = [
   { id: "sorcerer_spellcasting", level: 1, name: "Conjuração (Feiticeiro)", description: "Sua magia inata permite que você conjure magias. Carisma é sua habilidade de conjuração.", type: 'auto' },
   { id: "sorcerer_sorcerous_origin", level: 1, name: "Origem de Feitiçaria", description: "Escolha uma origem de feitiçaria que descreve a fonte do seu poder.", type: 'choice', selectionPrompt: "Escolha sua Origem de Feitiçaria:", choices: SORCERER_ORIGIN_CHOICES, maxChoices: 1 },
-  { id: "sorcerer_origin_feature_1", level: 1, name: "Característica de Origem de Feitiçaria (Nível 1)", description: "Você ganha uma característica da sua origem.", type: 'auto' },
+  { 
+    id: "sorcerer_draconic_ancestry", level: 1, name: "Ancestralidade Dracônica", 
+    description: "No 1º nível, você escolhe um tipo de dragão como seu ancestral. O tipo de dano associado a cada dragão é usado por características que você ganha mais tarde.",
+    type: 'choice', selectionPrompt: 'Escolha sua Ancestralidade Dracônica:',
+    choices: DRAGON_ANCESTRY_CHOICES.map(c => ({value: c.value, label: c.label, description: `Resistência a ${c.damageType}.`})),
+    subclassPrerequisite: { featureId: "sorcerer_sorcerous_origin", choiceValue: "draconic" }
+  },
+  { 
+    id: "sorcerer_draconic_resilience", level: 1, name: "Resiliência Dracônica", 
+    description: "A magia que flui através de seu corpo o fortalece. No 1º nível, seu máximo de pontos de vida aumenta em 1 e aumenta em 1 novamente sempre que você ganha um nível nesta classe. Além disso, partes de sua pele são cobertas por um brilho fino de escamas de dragão. Quando você não está vestindo armadura, sua CA é igual a 13 + seu modificador de Destreza.",
+    type: 'auto',
+    subclassPrerequisite: { featureId: "sorcerer_sorcerous_origin", choiceValue: "draconic" }
+  },
+  {
+    id: "sorcerer_wild_magic_surge", level: 1, name: "Surto de Magia Selvagem",
+    description: "A partir do 1º nível, sua conjuração pode liberar surtos de magia indomada. Imediatamente após você conjurar uma magia de feiticeiro de 1º nível ou superior, o Mestre pode fazer você rolar um d20. Se você rolar um 1, role na Tabela de Surto de Magia Selvagem para criar um efeito mágico aleatório.",
+    type: 'auto',
+    subclassPrerequisite: { featureId: "sorcerer_sorcerous_origin", choiceValue: "wild_magic" }
+  },
+  {
+    id: "sorcerer_tides_of_chaos", level: 1, name: "Marés do Caos",
+    description: "Você pode manipular as forças da sorte e do caos para ganhar vantagem em uma jogada de ataque, teste de habilidade ou teste de resistência. Uma vez que o faça, você deve terminar um descanso longo antes de poder usar esta característica novamente. Qualquer vez antes de recuperar o uso desta característica, o Mestre pode fazer você rolar na Tabela de Surto de Magia Selvagem imediatamente após você conjurar uma magia de feiticeiro de 1º nível ou superior. Você então recupera o uso desta característica.",
+    type: 'auto',
+    subclassPrerequisite: { featureId: "sorcerer_sorcerous_origin", choiceValue: "wild_magic" }
+  },
   { id: "sorcerer_font_of_magic", level: 2, name: "Fonte de Magia", description: "Você acessa uma fonte interna de magia, representada por pontos de feitiçaria. Você pode usar esses pontos para criar efeitos mágicos.", type: 'auto' }, // Sorcery points equal level
   { id: "sorcerer_metamagic_3", level: 3, name: "Metamágica (Opções Iniciais)", description: "Você ganha a habilidade de distorcer suas magias. Escolha duas opções de Metamágica.", type: 'choice', selectionPrompt: "Escolha 2 opções de Metamágica:", choices: METAMAGIC_OPTIONS_CHOICES, maxChoices: 2 },
   { id: "sorcerer_asi_4", level: 4, name: "Incremento no Valor de Habilidade (Feiticeiro Nível 4)", type: 'asi', description: "Aumente seus atributos." },
@@ -585,6 +802,12 @@ export const ROGUE_FEATURES_DEFINITIONS: ClassFeatureDefinition[] = [
     { id: "rogue_stroke_of_luck", level: 20, name: "Golpe de Sorte", description: "No 20º nível, você adquire um dom incrível para ter sucesso nos momentos em que mais precisa. Se um ataque seu falhar contra um alvo ao seu alcance, você pode transformar essa falha em um acerto. Ou se falhar em um teste qualquer, você pode tratar a jogada desse mesmo teste como 20 natural. Uma vez que você use essa característica, você não pode fazê-lo de novo até terminar um descanso curto ou longo.", type: 'auto' },
 ];
 
+const FOUR_ELEMENTS_DISCIPLINES: FeatureChoiceDefinition[] = [
+    {value: "fist_of_unbroken_air", label: "Punho do Ar Ininterrupto", description: "Você pode gastar 2 pontos de chi para escolher uma criatura a até 9 metros de você. A criatura deve fazer um teste de resistência de Força. Em uma falha, a criatura sofre 3d10 de dano de concussão, mais 1d10 de dano de concussão extra para cada ponto de chi adicional que você gastar, e você pode empurrar a criatura até 6 metros para longe de você e derrubá-la. Em um sucesso, a criatura sofre metade do dano e não é empurrada nem derrubada."},
+    {value: "water_whip", label: "Chicote de Água", description: "Você pode gastar 2 pontos de chi como uma ação bônus para criar um chicote de água que atinge uma criatura que você possa ver a até 9 metros de você. A criatura deve fazer um teste de resistência de Destreza. Em uma falha, a criatura sofre 3d10 de dano de concussão, mais 1d10 por ponto de chi adicional gasto, e você pode derrubá-la ou puxá-la até 7,5 metros para perto de você. Em um sucesso, a criatura sofre metade do dano e não é puxada nem derrubada."},
+    // More would be added here, especially those with level prerequisites.
+];
+
 export const MONK_FEATURES_DEFINITIONS: ClassFeatureDefinition[] = [
     { id: "monk_unarmored_defense", level: 1, name: "Defesa sem Armadura (Monge)", description: "Enquanto não estiver vestindo armadura nem empunhando escudo, sua CA é 10 + mod. Destreza + mod. Sabedoria.", type: 'auto' },
     { id: "monk_martial_arts_1d4", level: 1, name: "Artes Marciais (d4)", description: "Sua prática em artes marciais lhe concede maestria em estilos de combate que usam golpes desarmados e armas de monge (espadas curtas e qualquer arma corpo-a-corpo simples que não tenha a propriedade duas mãos ou pesada). Você ganha os seguintes benefícios enquanto estiver desarmado ou empunhando apenas armas de monge e não estiver vestindo armadura ou empunhando um escudo: Você pode usar Destreza ao invés de Força para as jogadas de ataque e dano de seus golpes desarmados e armas de monge. Você pode rolar um d4 no lugar do dano normal de seus golpes desarmados e armas de monge. Esse dado muda à medida que você ganha níveis de monge, como mostrado na coluna Artes Marciais da tabela O Monge. Quando você usa a ação de Ataque com um golpe desarmado ou uma arma de monge no seu turno, você pode realizar um golpe desarmado como uma ação bônus.", type: 'auto' },
@@ -595,6 +818,17 @@ export const MONK_FEATURES_DEFINITIONS: ClassFeatureDefinition[] = [
     { id: "monk_unarmored_movement_2", level: 2, name: "Movimento sem Armadura (+3m)", description: "A partir do 2° nível, seu deslocamento aumenta em 3 metros enquanto você não estiver usando armadura nem empunhando um escudo.", type: 'auto' },
     { id: "monk_monastic_tradition", level: 3, name: "Tradição Monástica", description: "Quando você alcança o 3° nível, você ingressa numa tradição monástica.", type: 'choice', selectionPrompt: "Escolha sua Tradição Monástica:", choices: MONK_MONASTIC_TRADITION_CHOICES, maxChoices: 1 },
     { id: "monk_deflect_missiles", level: 3, name: "Defletir Projéteis", description: "A partir do 3° nível, você pode usar sua reação para defletir ou apanhar o projétil quando você é atingido por um ataque de arma à distância. Quando o fizer, o dano que você sofrer do ataque é reduzido em 1d10 + seu modificador de Destreza + seu nível de monge. Se o dano for reduzido a 0, você pode apanhar o projétil se ele for pequeno o suficiente para ser segurando em uma mão e você tenha, pelo menos, uma mão livre. Se você apanhar um projétil dessa forma, você pode gastar 1 ponto de chi para realizar uma ataque à distância com a arma ou munição que você acabou de pegar, como parte da mesma reação. Você realiza esse ataque com proficiência, independentemente das armas em que você é proficiente, e o projétil conta como uma arma de monge para o ataque. A distância do ataque do monge é de 6/18 metros.", type: 'auto' },
+    { 
+        id: "monk_four_elements_disciplines", 
+        level: 3, 
+        name: "Discípulo dos Elementos", 
+        description: "Você aprende disciplinas mágicas que utilizam os elementos. Uma disciplina requer que você gaste pontos de chi cada vez que a usa. Você conhece a disciplina Sintonia Elemental e mais duas disciplinas elementais de sua escolha. Você aprende uma disciplina adicional de sua escolha nos níveis 6, 11 e 17.",
+        type: 'choice',
+        selectionPrompt: "Escolha 2 Disciplinas Elementais:",
+        choices: FOUR_ELEMENTS_DISCIPLINES,
+        maxChoices: 2,
+        subclassPrerequisite: { featureId: "monk_monastic_tradition", choiceValue: "four_elements" }
+    },
     { id: "monk_asi_4", level: 4, name: "Incremento no Valor de Habilidade (Monge Nível 4)", type: 'asi', description: "Aumente seus atributos." },
     { id: "monk_slow_fall", level: 4, name: "Queda Lenta", description: "Começando no 4° nível, você pode usar sua reação, quando você cai, para reduzir o dano de queda sofrido por um valor igual a cinco vezes seu nível de monge.", type: 'auto' },
     { id: "monk_extra_attack", level: 5, name: "Ataque Extra (Monge)", description: "Pode atacar duas vezes com a ação Ataque.", type: 'auto' },

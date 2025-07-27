@@ -1,8 +1,8 @@
 
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Character, AttributeName, ClassFeatureSelection, RacialFeatureSelection, RANKS, Rank, MagicInfo } from './types';
-import CharacterForm from './components/CharacterForm';
+import { Character, AttributeName, ClassFeatureSelection, RacialFeatureSelection, RANKS, Rank, MagicInfo, FeatSelection } from './types';
+import { CharacterForm } from './components/CharacterForm';
 import CharacterSheetDisplay from './components/CharacterSheetDisplay';
 import Button from './components/ui/Button';
 import RoleSelectionScreen from './components/RoleSelectionScreen';
@@ -19,6 +19,7 @@ import { ALL_CLASS_FEATURES_MAP } from './classFeaturesData';
 import { ALL_RACIAL_FEATURES_MAP } from './racialFeaturesData';
 import { getClassSpellSlots } from './classFeatures';
 import { calculateModifier } from './components/AttributeField';
+import { ALL_FEATS_MAP } from './feats';
 
 
 const LOCAL_STORAGE_ROLE_KEY = 'dndUserRole';
@@ -27,6 +28,26 @@ const LOCAL_STORAGE_ACTIVE_SCREEN_KEY = 'dndAppActiveScreen';
 
 
 type Screen = 'role' | 'dm_list' | 'player_char_list' | 'player_sheet' | 'player_form';
+
+const deriveFeatsFromClassFeatures = (classFeatures?: ClassFeatureSelection[]): FeatSelection[] => {
+    const selectedFeats: FeatSelection[] = [];
+    if (classFeatures) {
+        for (const feature of classFeatures) {
+            if (feature.type === 'asi' && feature.asiChoice === 'feat' && feature.choiceValue) {
+                const featData = ALL_FEATS_MAP[feature.choiceValue];
+                if (featData) {
+                    selectedFeats.push({
+                        featId: featData.id,
+                        featName: featData.name,
+                        description: featData.description,
+                        levelAcquired: feature.levelAcquired,
+                    });
+                }
+            }
+        }
+    }
+    return selectedFeats;
+};
 
 const App: React.FC = () => {
   const [userRole, setUserRole] = useState<string | null>(null);
@@ -58,6 +79,7 @@ const App: React.FC = () => {
         if (!updatedChar.rank) updatedChar.rank = RANKS[0];
         if (!updatedChar.classFeatures) updatedChar.classFeatures = [];
         if (!updatedChar.racialFeatures) updatedChar.racialFeatures = [];
+        updatedChar.feats = deriveFeatsFromClassFeatures(updatedChar.classFeatures);
         
         // Hit Dice
         updatedChar.maxHitDice = updatedChar.maxHitDice || updatedChar.level || 1;
@@ -172,6 +194,7 @@ const App: React.FC = () => {
         id: charToSave.id || `char_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
         classFeatures: charToSave.classFeatures || [], 
         racialFeatures: charToSave.racialFeatures || [],
+        feats: charToSave.feats || [],
         rank: charToSave.rank || RANKS[0],
         maxHitDice: charToSave.level > 0 ? charToSave.level : 1,
         currentHitDice: charToSave.currentHitDice !== undefined ? Math.min(charToSave.currentHitDice, (charToSave.level > 0 ? charToSave.level : 1)) : (charToSave.level > 0 ? charToSave.level : 1),
@@ -257,6 +280,7 @@ const App: React.FC = () => {
       }
       if ('classFeatures' in fullUpdates && !fullUpdates.classFeatures) fullUpdates.classFeatures = [];
       if ('racialFeatures' in fullUpdates && !fullUpdates.racialFeatures) fullUpdates.racialFeatures = [];
+      if ('feats' in fullUpdates && !fullUpdates.feats) fullUpdates.feats = [];
       
       if (fullUpdates.magic) {
         const originalMagic = originalCharacter.magic || {} as MagicInfo;
@@ -394,6 +418,7 @@ const App: React.FC = () => {
             fullyProcessedCharacter.magic.currentSpellSlots = [...currentMaxSlots];
         }
 
+        fullyProcessedCharacter.feats = deriveFeatsFromClassFeatures(fullyProcessedCharacter.classFeatures);
 
         setCharacters(prevChars => prevChars.map(c => c.id === characterId ? fullyProcessedCharacter : c));
         if (viewingCharacter && viewingCharacter.id === characterId) {

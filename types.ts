@@ -1,4 +1,20 @@
 
+
+
+export interface Feat {
+  id: string;
+  name: string;
+  description: string;
+}
+
+export interface FeatSelection {
+  featId: string;
+  featName: string;
+  description: string;
+  levelAcquired: number; 
+}
+
+
 export interface Character {
   id: string;
   photoUrl: string;
@@ -30,6 +46,7 @@ export interface Character {
   magic?: MagicInfo;
   classFeatures?: ClassFeatureSelection[]; 
   racialFeatures?: RacialFeatureSelection[]; 
+  feats?: FeatSelection[];
   rank?: Rank; 
 
   // Hit Dice
@@ -103,6 +120,7 @@ export interface FeatureChoiceDefinition {
   value: string;
   label: string;
   description?: string;
+  damage?: string; // e.g., "1d8 extra damage"
   damageType?: string; 
   breathWeaponDescription?: string; 
 }
@@ -116,6 +134,10 @@ interface BaseFeatureDefinition {
   choices?: FeatureChoiceDefinition[]; 
   maxChoices?: number;
   prerequisiteFeatureId?: string; 
+  subclassPrerequisite?: {
+    featureId: string;
+    choiceValue: string;
+  };
 }
 
 export interface ClassFeatureDefinition extends BaseFeatureDefinition {
@@ -135,6 +157,7 @@ interface BaseFeatureSelection {
   choiceLabel?: string;   
   customChoiceText?: string;
   appliesTo?: string; 
+  asiChoice?: 'asi' | 'feat';
 }
 
 export interface ClassFeatureSelection extends BaseFeatureSelection {

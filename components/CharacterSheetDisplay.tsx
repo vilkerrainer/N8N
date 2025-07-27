@@ -1,7 +1,8 @@
 
 
+
 import React, { useState, useEffect } from 'react';
-import { Character, ATTRIBUTE_NAMES, ATTRIBUTE_LABELS, AttributeName, MagicInfo, Spell, ClassFeatureSelection, RacialFeatureSelection, RANKS, Rank } from '../types';
+import { Character, ATTRIBUTE_NAMES, ATTRIBUTE_LABELS, AttributeName, MagicInfo, Spell, ClassFeatureSelection, RacialFeatureSelection, RANKS, Rank, FeatSelection } from '../types';
 import AttributeField, { calculateModifier, formatModifier } from './AttributeField';
 import Button from './ui/Button';
 import Input from './ui/Input'; 
@@ -461,7 +462,10 @@ const CharacterSheetDisplay: React.FC<CharacterSheetDisplayProps> = ({ character
                 {feature.type === 'choice' && feature.choiceLabel && (
                   <span>: <span className="italic">{feature.choiceLabel}</span></span>
                 )}
-                {feature.type === 'asi' && (
+                {feature.type === 'asi' && feature.asiChoice === 'feat' && feature.choiceLabel && (
+                   <span>: <span className="italic">{feature.choiceLabel}</span></span>
+                )}
+                {feature.type === 'asi' && (!feature.asiChoice || feature.asiChoice === 'asi') && (
                   <span className="italic"> (Incremento no Valor de Habilidade)</span>
                 )}
                 {feature.description && (feature.type !== 'choice' || !feature.choiceLabel) && ( 
@@ -798,6 +802,19 @@ const CharacterSheetDisplay: React.FC<CharacterSheetDisplayProps> = ({ character
         </Section>
       </div>
       
+      {character.feats && character.feats.length > 0 && (
+        <Section title="Talentos">
+          <ul className="space-y-4">
+            {character.feats.sort((a,b) => a.levelAcquired - b.levelAcquired).map(feat => (
+              <li key={feat.featId} className="p-3 bg-slate-100 dark:bg-slate-600/50 rounded-md shadow-sm">
+                <h4 className="font-semibold text-slate-800 dark:text-slate-100">{feat.featName} (Nível {feat.levelAcquired})</h4>
+                <p className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap mt-1 text-justify">{feat.description}</p>
+              </li>
+            ))}
+          </ul>
+        </Section>
+      )}
+
       <Section title="Resistências (Saving Throws)">
         <p className="text-slate-800 dark:text-slate-100 whitespace-pre-wrap">{character.savingThrows || 'Nenhuma resistência listada.'}</p>
       </Section>
