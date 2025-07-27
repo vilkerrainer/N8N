@@ -14,6 +14,14 @@ export interface FeatSelection {
   levelAcquired: number; 
 }
 
+export interface CharacterAttributes {
+  strength: number;
+  dexterity: number;
+  constitution: number;
+  intelligence: number;
+  wisdom: number;
+  charisma: number;
+}
 
 export interface Character {
   id: string;
@@ -29,18 +37,10 @@ export interface Character {
   hp: number;
   hpt: number;
   ac: number;
-  attributes: {
-    strength: number;
-    dexterity: number;
-    constitution: number;
-    intelligence: number;
-    wisdom: number;
-    charisma: number;
-  };
+  attributes: CharacterAttributes;
   proficientSkills: string[];
   skillNotes: string;
   items: string;
-  savingThrows: string;
   abilities: string; // General racial/class abilities not tied to level progression choices
   fightingStyle: string; 
   magic?: MagicInfo;
@@ -100,7 +100,7 @@ export interface MagicInfo {
   currentSpellSlots: number[]; // Current available spell slots per level
 }
 
-export type AttributeName = keyof Character['attributes'];
+export type AttributeName = keyof CharacterAttributes;
 
 export const ATTRIBUTE_NAMES: AttributeName[] = [
   'strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma'
@@ -145,7 +145,7 @@ export interface ClassFeatureDefinition extends BaseFeatureDefinition {
 }
 
 export interface RacialFeatureDefinition extends BaseFeatureDefinition {
-  // Racial features are typically always active or chosen at creation
+  grantsSkillProficiency?: string; 
 }
 
 interface BaseFeatureSelection {
@@ -171,6 +171,12 @@ export interface RacialFeatureSelection extends BaseFeatureSelection {
 export const RANKS = ["Ferro", "Bronze", "Prata", "Ouro", "Platina", "Diamante"] as const;
 export type Rank = typeof RANKS[number];
 
+export interface BackgroundDefinition {
+  name: string;
+  skillProficiencies: string[];
+  toolProficiencies: string[];
+  languages: string[];
+}
 
 export const WIZARD_ARCANE_TRADITION_CHOICES: FeatureChoiceDefinition[] = [
     { value: "abjuration", label: "Escola de Abjuração", description: "Foco em magias de proteção e negação." },

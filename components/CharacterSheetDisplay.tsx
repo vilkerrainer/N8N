@@ -12,7 +12,8 @@ import {
     FIGHTING_STYLE_OPTIONS, getHitDieTypeForClass,
     getMaxRages, getMaxBardicInspirations, getMaxChannelDivinityUses,
     getMaxRelentlessEnduranceUses, getMaxSecondWindUses, getMaxActionSurgeUses,
-    getMaxBreathWeaponUses, getMaxKiPoints, getMaxLayOnHandsPool
+    getMaxBreathWeaponUses, getMaxKiPoints, getMaxLayOnHandsPool,
+    CLASS_SAVING_THROWS
 } from '../dndOptions'; 
 import { ALL_SPELLS_MAP } from '../spells'; 
 import { getClassSpellSlots, WARLOCK_PACT_SLOT_LEVEL } from '../classFeatures';
@@ -802,6 +803,30 @@ const CharacterSheetDisplay: React.FC<CharacterSheetDisplayProps> = ({ character
         </Section>
       </div>
       
+      <Section title="Resistências (Saving Throws)">
+        <div className="grid grid-cols-1 gap-2">
+          {ATTRIBUTE_NAMES.map(attrName => {
+            const proficientSaves = CLASS_SAVING_THROWS[character.charClass] || [];
+            const isProficient = proficientSaves.includes(attrName);
+            const attributeScore = character.attributes[attrName];
+            const attributeModifier = calculateModifier(attributeScore);
+            const saveModifier = attributeModifier + (isProficient ? proficiencyBonus : 0);
+            
+            return (
+              <div key={attrName} className={`flex justify-between p-2 rounded ${isProficient ? 'bg-sky-100 dark:bg-sky-700/50' : 'bg-slate-100 dark:bg-slate-600/50'}`}>
+                <span className={`font-medium ${isProficient ? 'text-sky-700 dark:text-sky-400' : 'text-slate-700 dark:text-slate-300'}`}>
+                  {isProficient && <span title="Proficiente">● </span>}
+                  {ATTRIBUTE_LABELS[attrName]}
+                </span>
+                <span className={`${isProficient ? 'text-slate-800 dark:text-slate-100 font-semibold' : 'text-slate-800 dark:text-slate-200'}`}>
+                  {formatModifier(saveModifier)}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      </Section>
+
       {character.feats && character.feats.length > 0 && (
         <Section title="Talentos">
           <ul className="space-y-4">
@@ -815,10 +840,6 @@ const CharacterSheetDisplay: React.FC<CharacterSheetDisplayProps> = ({ character
         </Section>
       )}
 
-      <Section title="Resistências (Saving Throws)">
-        <p className="text-slate-800 dark:text-slate-100 whitespace-pre-wrap">{character.savingThrows || 'Nenhuma resistência listada.'}</p>
-      </Section>
-      
       <Section title="Características Raciais">
         {renderRacialFeaturesDisplay(character.racialFeatures)}
       </Section>

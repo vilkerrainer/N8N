@@ -8,7 +8,7 @@ const WIZARD_CANTRIPS_FOR_HIGH_ELF: FeatureChoiceDefinition[] = ALL_AVAILABLE_SP
 
 // --- Shared Elf Features ---
 const ELF_DARKVISION: RacialFeatureDefinition = { id: "elf_darkvision", name: "Visão no Escuro (Elfo)", description: "Acostumado a florestas crepusculares e ao céu noturno, você tem visão superior em condições de escuridão e penumbra. Você enxerga na penumbra a até 18 metros como se fosse luz plena, e no escuro como se fosse na penumbra. Você não pode discernir cores no escuro, apenas tons de cinza.", type: 'auto' };
-const ELF_KEEN_SENSES: RacialFeatureDefinition = { id: "elf_keen_senses", name: "Sentidos Aguçados", description: "Você tem proficiência na perícia Percepção.", type: 'auto' };
+const ELF_KEEN_SENSES: RacialFeatureDefinition = { id: "elf_keen_senses", name: "Sentidos Aguçados", description: "Você tem proficiência na perícia Percepção.", type: 'auto', grantsSkillProficiency: 'perception' };
 const ELF_FEY_ANCESTRY: RacialFeatureDefinition = { id: "elf_fey_ancestry", name: "Ancestralidade Feérica", description: "Você possui vantagem em testes de resistência contra ser enfeitiçado, e magia não pode colocá-lo para dormir.", type: 'auto' };
 const ELF_TRANCE: RacialFeatureDefinition = { id: "elf_trance", name: "Transe", description: "Elfos não precisam dormir. Ao invés disso, eles meditam profundamente, permanecendo semiconscientes, durante 4 horas por dia. Depois de descansar dessa forma, você ganha os mesmos benefícios que um humano depois de 8 horas de sono.", type: 'auto' };
 const ELF_WEAPON_TRAINING: RacialFeatureDefinition = { id: "elf_weapon_training", name: "Treinamento Élfico em Armas", description: "Você tem proficiência com espadas longas, espadas curtas, arcos longos e arcos curtos.", type: 'auto' };
@@ -176,13 +176,13 @@ const ROCK_GNOME_RACIAL_FEATURES: RacialFeatureDefinition[] = [
 const HALF_ELF_RACIAL_FEATURES: RacialFeatureDefinition[] = [
     { id: "half_elf_darkvision", name: "Visão no Escuro (Meio-Elfo)", description: "Graças ao seu sangue élfico, você tem visão superior em condições de escuridão e penumbra...", type: 'auto' },
     ELF_FEY_ANCESTRY, // Inherited from Elf
-    { id: "half_elf_skill_versatility", name: "Versatilidade em Perícia", description: "Você ganha proficiência em duas perícias, à sua escolha.", type: 'auto' } // Player choice of skills.
+    { id: "half_elf_skill_versatility", name: "Versatilidade em Perícia", description: "Você ganha proficiência em duas perícias, à sua escolha (selecione abaixo).", type: 'auto' } // Player choice of skills.
 ];
 
 // --- Half-Orc Racial Features ---
 const HALF_ORC_RACIAL_FEATURES: RacialFeatureDefinition[] = [
     { id: "half_orc_darkvision", name: "Visão no Escuro (Meio-Orc)", description: "Graças ao seu sangue orc, você tem visão superior em condições de escuridão e penumbra...", type: 'auto' },
-    { id: "half_orc_menacing", name: "Ameaçador", description: "Você adquire proficiência na perícia Intimidação.", type: 'auto' },
+    { id: "half_orc_menacing", name: "Ameaçador", description: "Você adquire proficiência na perícia Intimidação.", type: 'auto', grantsSkillProficiency: 'intimidation' },
     { id: "half_orc_relentless_endurance", name: "Resistência Implacável", description: "Quando você é reduzido a 0 pontos de vida mas não é completamente morto, você pode voltar para 1 ponto de vida. Você não pode usar essa característica novamente até completar um descanso longo.", type: 'auto' },
     { id: "half_orc_savage_attacks", name: "Ataques Selvagens", description: "Quando você atinge um ataque crítico com uma arma corpo-a-corpo, você pode rolar um dos dados de dano da arma mais uma vez e adicioná-lo ao dano extra causado pelo acerto crítico.", type: 'auto' }
 ];

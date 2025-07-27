@@ -1,5 +1,5 @@
 
-import { createClient, SupabaseClient, RealtimeChannel } from '@supabase/supabase-js';
+import { createClient, SupabaseClient, RealtimeChannel, RealtimePostgresUpdatePayload } from '@supabase/supabase-js';
 import { Character } from './types';
 
 // IMPORTANT: These are the credentials you provided.
@@ -149,8 +149,8 @@ export const subscribeToCharacterUpdates = (
         table: TABLE_NAME,
         filter: `id=eq.${characterId}`,
       },
-      (payload) => {
-        if (payload.new && typeof payload.new === 'object' && payload.new !== null) {
+      (payload: RealtimePostgresUpdatePayload<{ [key: string]: any }>) => {
+        if (payload.new) {
             const updatedChar = payload.new as Character;
             if (updatedChar.id && updatedChar.name) { 
                  callback(updatedChar);

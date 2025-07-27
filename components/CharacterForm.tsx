@@ -1,7 +1,7 @@
 
 
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { 
   Character, AttributeName, ATTRIBUTE_NAMES, ATTRIBUTE_LABELS, MagicInfo, Spell, 
   ClassFeatureDefinition, ClassFeatureSelection, FeatureChoiceDefinition, 
@@ -10,11 +10,12 @@ import {
 } from '../types';
 import { ALL_SKILLS, SkillDefinition, calculateProficiencyBonus } from '../skills';
 import { 
-    RACES, CLASSES, BACKGROUNDS, ALIGNMENTS, FIGHTING_STYLE_OPTIONS, 
+    RACES, CLASSES, ALIGNMENTS, FIGHTING_STYLE_OPTIONS, 
     CLASS_SPELLCASTING_ABILITIES, getHitDieTypeForClass,
     getMaxRages, getMaxBardicInspirations, getMaxChannelDivinityUses,
     getMaxRelentlessEnduranceUses, getMaxSecondWindUses, getMaxActionSurgeUses,
-    getMaxBreathWeaponUses, getMaxKiPoints, getMaxLayOnHandsPool
+    getMaxBreathWeaponUses, getMaxKiPoints, getMaxLayOnHandsPool,
+    CLASS_SKILL_OPTIONS, BACKGROUND_DETAILS, BACKGROUNDS
 } from '../dndOptions';
 import { ALL_AVAILABLE_SPELLS, getCantripsByClass, getSpellsByClassAndLevel } from '../spells'; 
 import { ALL_FEATS, ALL_FEATS_MAP } from '../feats';
@@ -62,7 +63,6 @@ const initialCharacterValues: Omit<Character, 'id' | 'magic' | 'classFeatures' |
   proficientSkills: [],
   skillNotes: '',
   items: '',
-  savingThrows: '',
   abilities: '',
   fightingStyle: FIGHTING_STYLE_OPTIONS.find(fso => fso.name === "")?.name || FIGHTING_STYLE_OPTIONS[0].name,
   magic: {
@@ -176,6 +176,9 @@ export const CharacterForm: React.FC<CharacterFormProps> = ({ onSave, initialDat
     return baseData;
   });
 
+  const [chosenClassSkills, setChosenClassSkills] = useState<string[]>([]);
+  const [chosenHalfElfSkills, setChosenHalfElfSkills] = useState<string[]>([]);
+
   const [availableCantrips, setAvailableCantrips] = useState<Spell[]>([]);
   const [numCantripsAllowed, setNumCantripsAllowed] = useState<number>(0);
   
@@ -200,6 +203,92 @@ export const CharacterForm: React.FC<CharacterFormProps> = ({ onSave, initialDat
     return ALL_RACIAL_FEATURES_MAP[formData.race] || [];
   }, [formData.race]);
 
+  // --- Skill System Logic ---
+  const autoGrantedSkills = useMemo(() => {
+    const skills = new Map<string, string>(); // Map<skillKey, source>
+    // From Background
+    const backgroundDetails = BACKGROUND_DETAILS[formData.background];
+    if (backgroundDetails) {
+        backgroundDetails.skillProficiencies.forEach(skillKey => {
+            skills.set(skillKey, 'do Antecedente');
+        });
+    }
+    // From Race
+    const racialFeatures = ALL_RACIAL_FEATURES_MAP[formData.race] || [];
+    racialFeatures.forEach(feature => {
+        if (feature.grantsSkillProficiency) {
+            skills.set(feature.grantsSkillProficiency, 'da Raça');
+        }
+    });
+    return skills;
+  }, [formData.background, formData.race]);
+
+  const classSkillConfig = useMemo(() => CLASS_SKILL_OPTIONS[formData.charClass], [formData.charClass]);
+  const isHalfElf = useMemo(() => formData.race === 'Meio-Elfo', [formData.race]);
+
+  // Initialize chosen skills from initialData
+  useEffect(() => {
+    if (initialData?.proficientSkills) {
+      const autoSkills = autoGrantedSkills; // Use memoized version
+      const chosen = initialData.proficientSkills.filter(s => !autoSkills.has(s));
+      
+      const classChoices: string[] = [];
+      const halfElfChoices: string[] = [];
+      
+      const isInitialDataHalfElf = initialData.race === 'Meio-Elfo';
+      const initialClassSkillOptions = CLASS_SKILL_OPTIONS[initialData.charClass]?.options || [];
+
+      chosen.forEach(skill => {
+        if (isInitialDataHalfElf && !initialClassSkillOptions.includes(skill)) {
+           halfElfChoices.push(skill);
+        } else if (initialClassSkillOptions.includes(skill)) {
+           classChoices.push(skill);
+        }
+      });
+      
+      setChosenClassSkills(classChoices);
+      setChosenHalfElfSkills(halfElfChoices);
+    }
+  }, [initialData]); // Depends on initialData only once
+
+  // Reset chosen skills when class or race changes
+  useEffect(() => {
+    setChosenClassSkills([]);
+    setChosenHalfElfSkills([]);
+  }, [formData.charClass, formData.race]);
+
+  // Combine auto and chosen skills into formData
+  useEffect(() => {
+    const finalSkills = new Set([
+        ...Array.from(autoGrantedSkills.keys()),
+        ...chosenClassSkills,
+        ...chosenHalfElfSkills
+    ]);
+    setFormData(prev => {
+        const newProficientSkills = Array.from(finalSkills);
+        if (JSON.stringify(prev.proficientSkills.sort()) !== JSON.stringify(newProficientSkills.sort())) {
+            return { ...prev, proficientSkills: newProficientSkills };
+        }
+        return prev;
+    });
+  }, [autoGrantedSkills, chosenClassSkills, chosenHalfElfSkills]);
+
+  const handleSkillChoiceChange = useCallback((skillKey: string, type: 'class' | 'half-elf') => {
+    const updater = type === 'class' ? setChosenClassSkills : setChosenHalfElfSkills;
+    const choices = type === 'class' ? chosenClassSkills : chosenHalfElfSkills;
+    const limit = type === 'class' ? (classSkillConfig?.count || 0) : (isHalfElf ? 2 : 0);
+
+    updater(prev => {
+      if (prev.includes(skillKey)) {
+        return prev.filter(s => s !== skillKey);
+      } else if (prev.length < limit) {
+        return [...prev, skillKey];
+      }
+      return prev;
+    });
+  }, [chosenClassSkills, chosenHalfElfSkills, classSkillConfig, isHalfElf]);
+
+  // --- End of Skill System Logic ---
 
   useEffect(() => {
     const baseData = initialData && initialData.id 
@@ -857,16 +946,6 @@ export const CharacterForm: React.FC<CharacterFormProps> = ({ onSave, initialDat
         return { ...prev, racialFeatures: newRacialFeatures, magic: updatedMagic };
     });
   };
-
-
-  const handleSkillProficiencyChange = (skillKey: string) => {
-    setFormData(prev => {
-      const newProficientSkills = prev.proficientSkills.includes(skillKey)
-        ? prev.proficientSkills.filter(s => s !== skillKey)
-        : [...prev.proficientSkills, skillKey];
-      return { ...prev, proficientSkills: newProficientSkills };
-    });
-  };
   
   const handleMagicArrayChange = (fieldName: 'cantripsKnown' | 'spellbook' | 'spellsKnownPrepared', spellName: string) => {
     setFormData(prev => {
@@ -1381,28 +1460,97 @@ export const CharacterForm: React.FC<CharacterFormProps> = ({ onSave, initialDat
 
 
       <div>
-        <h3 className="text-lg font-semibold text-sky-600 dark:text-sky-400 mb-3">Perícias Proficientes</h3>
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-          {ALL_SKILLS.map((skill: SkillDefinition) => (
-            <div key={skill.key} className="flex items-center">
-              <input
-                type="checkbox"
-                id={`skill-${skill.key}`}
-                name={`skill-${skill.key}`}
-                checked={formData.proficientSkills.includes(skill.key)}
-                onChange={() => handleSkillProficiencyChange(skill.key)}
-                className="h-4 w-4 text-sky-600 border-slate-300 rounded focus:ring-sky-500 dark:text-sky-500 dark:border-slate-500 dark:focus:ring-sky-500 dark:bg-slate-600"
-              />
-              <label htmlFor={`skill-${skill.key}`} className="ml-2 block text-sm text-slate-700 dark:text-slate-300">
-                {skill.label} <span className="text-xs text-slate-500 dark:text-gray-400">({ATTRIBUTE_LABELS[skill.attribute].substring(0,3)})</span>
-              </label>
-            </div>
-          ))}
+        <h3 className="text-lg font-semibold text-sky-600 dark:text-sky-400 mb-3">Perícias</h3>
+        
+        {/* Automated Skills Section */}
+        <div className="mb-4">
+            <h4 className="text-md font-medium text-slate-700 dark:text-slate-300 mb-2">Perícias Concedidas Automaticamente:</h4>
+            {autoGrantedSkills.size > 0 ? (
+                <ul className="list-disc list-inside text-sm text-slate-600 dark:text-slate-400">
+                    {Array.from(autoGrantedSkills.entries()).map(([skillKey, source]) => {
+                        const skillLabel = ALL_SKILLS.find(s => s.key === skillKey)?.label || skillKey;
+                        return <li key={skillKey}>{skillLabel} <span className="italic">({source})</span></li>;
+                    })}
+                </ul>
+            ) : <p className="text-sm text-slate-500 dark:text-slate-400 italic">Nenhuma por enquanto.</p>}
         </div>
+
+        {/* Class Skill Choices */}
+        {classSkillConfig && classSkillConfig.count > 0 && (
+            <div className="mb-4 p-4 border border-sky-200 dark:border-sky-800 rounded-md bg-sky-50 dark:bg-sky-900/50">
+                <h4 className="text-md font-medium text-slate-800 dark:text-slate-200 mb-2">
+                    Escolhas de Perícia da Classe ({formData.charClass}): 
+                    <span className="font-bold text-sky-600 dark:text-sky-400"> {chosenClassSkills.length} / {classSkillConfig.count}</span>
+                </h4>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    {classSkillConfig.options.map(skillKey => {
+                        const skill = ALL_SKILLS.find(s => s.key === skillKey);
+                        if (!skill) return null;
+                        
+                        const isAuto = autoGrantedSkills.has(skillKey);
+                        if (isAuto) return null; // Don't show class options if already granted
+
+                        const isChecked = chosenClassSkills.includes(skillKey);
+                        const isDisabled = !isChecked && chosenClassSkills.length >= classSkillConfig.count;
+                        
+                        return (
+                            <div key={skill.key} className="flex items-center">
+                                <input
+                                    type="checkbox"
+                                    id={`skill-class-${skill.key}`}
+                                    checked={isChecked}
+                                    onChange={() => handleSkillChoiceChange(skill.key, 'class')}
+                                    disabled={isDisabled}
+                                    className="h-4 w-4 text-sky-600 border-slate-300 rounded focus:ring-sky-500 disabled:opacity-50"
+                                />
+                                <label htmlFor={`skill-class-${skill.key}`} className={`ml-2 block text-sm ${isDisabled ? 'text-slate-400 dark:text-slate-500' : 'text-slate-700 dark:text-slate-300'}`}>
+                                    {skill.label} <span className="text-xs text-slate-500 dark:text-gray-400">({ATTRIBUTE_LABELS[skill.attribute].substring(0,3)})</span>
+                                </label>
+                            </div>
+                        );
+                    })}
+                </div>
+            </div>
+        )}
+        
+        {/* Half-Elf Skill Choices */}
+        {isHalfElf && (
+             <div className="mb-4 p-4 border border-emerald-200 dark:border-emerald-800 rounded-md bg-emerald-50 dark:bg-emerald-900/50">
+                <h4 className="text-md font-medium text-slate-800 dark:text-slate-200 mb-2">
+                    Versatilidade em Perícia (Meio-Elfo): 
+                    <span className="font-bold text-emerald-600 dark:text-emerald-400"> {chosenHalfElfSkills.length} / 2</span>
+                </h4>
+                <p className="text-xs text-slate-600 dark:text-slate-400 mb-3">Escolha duas perícias quaisquer.</p>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    {ALL_SKILLS.map(skill => {
+                        const isAuto = autoGrantedSkills.has(skill.key);
+                        if (isAuto) return null;
+
+                        const isChecked = chosenHalfElfSkills.includes(skill.key);
+                        const isDisabled = !isChecked && chosenHalfElfSkills.length >= 2;
+
+                        return (
+                             <div key={`skill-halfelf-${skill.key}`} className="flex items-center">
+                                <input
+                                    type="checkbox"
+                                    id={`skill-halfelf-${skill.key}`}
+                                    checked={isChecked}
+                                    onChange={() => handleSkillChoiceChange(skill.key, 'half-elf')}
+                                    disabled={isDisabled}
+                                    className="h-4 w-4 text-emerald-600 border-slate-300 rounded focus:ring-emerald-500 disabled:opacity-50"
+                                />
+                                <label htmlFor={`skill-halfelf-${skill.key}`} className={`ml-2 block text-sm ${isDisabled ? 'text-slate-400 dark:text-slate-500' : 'text-slate-700 dark:text-slate-300'}`}>
+                                    {skill.label} <span className="text-xs text-slate-500 dark:text-gray-400">({ATTRIBUTE_LABELS[skill.attribute].substring(0,3)})</span>
+                                </label>
+                            </div>
+                        );
+                    })}
+                </div>
+            </div>
+        )}
       </div>
       
       <Textarea label="Notas sobre Perícias e Habilidades" name="skillNotes" value={formData.skillNotes} onChange={handleChange} placeholder="Notas sobre perícias, talentos, etc." />
-      <Textarea label="Resistências (Saving Throws)" name="savingThrows" value={formData.savingThrows} onChange={handleChange} placeholder="Ex: Força +2, Destreza +5" />
       <Textarea label="Inventário (Itens)" name="items" value={formData.items} onChange={handleChange} />
       <Textarea label="Habilidades Gerais (Raça/Outros)" name="abilities" value={formData.abilities} onChange={handleChange} placeholder="Habilidades raciais, de antecedentes, etc."/>
       
